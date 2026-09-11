@@ -1,0 +1,77 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Xcode
+DerivedData/
+build/
+xcuserdata/
+*.xcuserstate
+*.xcarchive
+*.xcresult
+
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# Swift generated files
+*.swiftdoc
+*.swiftmodule
+*.swiftsourceinfo
+*.swiftinterface
+
+# Secrets / local configuration
+.env
+.env.*
+!.env.example
+*.secret
+*.secrets
+secrets/
+credentials/
+
+# Signing / certificates
+*.p12
+*.pfx
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.pem
+*.key
+
+# Logs / temporary files
+*.log
+logs/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# IDEs
+.idea/
+.vscode/
+.zed/
+
+# Test / coverage output
+TestResults/
+coverage/
+*.profraw
+*.profdata
+
+# Distribution artifacts
+*.ipa
+*.pkg
+*.dmg
+
+# Local AI tooling
+.claude/
+.cursor/
+.opencode/
+
+# local
+docs/
+website/
+scripts/
+TextGrab.xcodeproj/

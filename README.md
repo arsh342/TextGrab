@@ -1,5 +1,7 @@
 # TextGrab
 
+[▶ Watch demo video](resources/textgrab_vid.mp4)
+
 Native macOS utility for extracting text from anywhere on the screen.
 
 **Tagline:** Instant screen-to-text for macOS.

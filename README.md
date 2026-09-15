@@ -1,10 +1,14 @@
 # TextGrab
 
-[▶ Watch demo video](resources/textgrab_vid.mp4)
-
 Native macOS utility for extracting text from anywhere on the screen.
 
 **Tagline:** Instant screen-to-text for macOS.
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=9mMDe5v_Pxk">
+    <img src="https://img.youtube.com/vi/9mMDe5v_Pxk/maxresdefault.jpg" alt="TextGrab Demo" width="700">
+  </a>
+</p>
 
 ## Core Workflow
 

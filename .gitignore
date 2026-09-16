@@ -70,8 +70,9 @@ coverage/
 .cursor/
 .opencode/
 
-# local
+# Website (deployed directly to Vercel, not from git)
 docs/
 website/
-scripts/
-TextGrab.xcodeproj/
+node_modules/
+dist/
+website/public/textgrab_vid.mp4

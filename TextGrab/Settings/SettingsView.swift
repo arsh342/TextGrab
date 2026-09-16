@@ -402,7 +402,15 @@ final class ShortcutRecorderNSView: NSView {
 
 struct AdvancedSettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
-    
+
+    private static let appVersion: String = {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+    }()
+
+    private static let buildNumber: String = {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
+    }()
+
     var body: some View {
         Form {
             Section("Debug") {
@@ -414,21 +422,21 @@ struct AdvancedSettingsView: View {
                 HStack {
                     Text("Version")
                     Spacer()
-                    Text("0.1.0")
+                    Text(Self.appVersion)
                         .foregroundColor(.secondary)
                 }
-                
+
                 HStack {
                     Text("Build")
                     Spacer()
-                    Text("1")
+                    Text(Self.buildNumber)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Section {
-                Link("Privacy Policy", destination: URL(string: "https://github.com/textgrab/privacy")!)
-                Link("Source Code", destination: URL(string: "https://github.com/textgrab/textgrab")!)
+                Link("Privacy Policy", destination: URL(string: "https://github.com/arsh342/TextGrab#security")!)
+                Link("Source Code", destination: URL(string: "https://github.com/arsh342/TextGrab")!)
             }
         }
         .formStyle(.grouped)

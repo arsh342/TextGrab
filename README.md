@@ -176,6 +176,8 @@ Copy text
 xcodebuild -project TextGrab.xcodeproj -scheme TextGrab -configuration Release
 ```
 
+THIS IS NOT THE FINAL BUILD. SO, THERE MIGHT BE SOME BUGS YOU CAN EXPERIENCE.
+
 ## License
 
 MIT — see [LICENSE](LICENSE)

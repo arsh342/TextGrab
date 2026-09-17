@@ -3,16 +3,25 @@ import ScreenCaptureKit
 import CoreGraphics
 import AppKit
 
+/// Sendable snapshot of an NSScreen's capture-relevant properties, so the
+/// capture can run inside a `@Sendable` closure without capturing NSScreen.
+struct DisplayInfo: Sendable {
+    let displayID: CGDirectDisplayID
+    let frame: CGRect
+    let backingScaleFactor: CGFloat
+    let localizedName: String
+}
+
 protocol ScreenCaptureService {
-    func capture(display: NSScreen, region: CGRect) async throws -> CGImage
+    func capture(display: DisplayInfo, region: CGRect) async throws -> CGImage
 }
 
 final class ScreenCaptureManager: ScreenCaptureService {
     private var availableContent: SCShareableContent?
-    
-    func capture(display: NSScreen, region: CGRect) async throws -> CGImage {
+
+    func capture(display: DisplayInfo, region: CGRect) async throws -> CGImage {
         Logger.shared.debug("Capturing screen region: \(region) on display: \(display.localizedName)")
-        
+
         var content = try await getShareableContent()
         var scDisplay = content.displays.first(where: { $0.displayID == display.displayID })
         if scDisplay == nil {
@@ -23,7 +32,7 @@ final class ScreenCaptureManager: ScreenCaptureService {
         guard let scDisplay else {
             throw TextGrabError.captureFailed("Display not found in shareable content")
         }
-        
+
         let filter = SCContentFilter(display: scDisplay, excludingApplications: [], exceptingWindows: [])
         let displayFrame = display.frame
         let captureRegion = region
@@ -38,16 +47,16 @@ final class ScreenCaptureManager: ScreenCaptureService {
             width: captureRegion.width,
             height: captureRegion.height
         )
-        
+
         let configuration = SCStreamConfiguration()
         configuration.width = max(1, Int((localRegion.width * display.backingScaleFactor).rounded()))
         configuration.height = max(1, Int((localRegion.height * display.backingScaleFactor).rounded()))
         configuration.sourceRect = localRegion
         configuration.scalesToFit = false
         configuration.pixelFormat = kCVPixelFormatType_32BGRA
-        
+
         let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: configuration)
-        
+
         Logger.shared.debug("Capture completed: \(image.width)x\(image.height)")
         return image
     }

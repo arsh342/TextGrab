@@ -85,6 +85,7 @@ enum TextGrabError: LocalizedError, Equatable {
     case clipboardFailed(String)
     case shortcutRegistrationFailed(String)
     case aiFailed(String)
+    case operationTimedOut(TimeInterval)
     case unknown(Error)
 
     var errorDescription: String? {
@@ -101,6 +102,8 @@ enum TextGrabError: LocalizedError, Equatable {
             return "Shortcut registration failed: \(message)"
         case .aiFailed(let message):
             return "Apple Intelligence failed: \(message)"
+        case .operationTimedOut(let seconds):
+            return "Timed out after \(Int(seconds))s — try a smaller selection"
         case .unknown(let error):
             return "Unknown error: \(error.localizedDescription)"
         }

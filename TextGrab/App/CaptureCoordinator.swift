@@ -145,35 +145,54 @@ final class CaptureCoordinator: ObservableObject {
         }
         
         appState.transition(to: .capturing)
-        
+
         do {
-            let image = try await screenCapture.capture(display: screen, region: rect)
-            
+            guard let displayID = screen.displayID else {
+                appState.transition(to: .error(TextGrabError.captureFailed("Display ID unavailable")))
+                return
+            }
+            let displayInfo = DisplayInfo(
+                displayID: displayID,
+                frame: screen.frame,
+                backingScaleFactor: screen.backingScaleFactor,
+                localizedName: screen.localizedName
+            )
+
+            let image = try await withTimeout(15) { [screenCapture, displayInfo] in
+                try await screenCapture.capture(display: displayInfo, region: rect)
+            }
+
             appState.transition(to: .processing)
-            
+
             var configuration = OCRConfiguration()
             configuration.recognitionLevel = settingsManager.recognitionLevel.vnLevel
             configuration.languages = settingsManager.languages
             configuration.usesLanguageCorrection = settingsManager.usesLanguageCorrection
             configuration.mode = settingsManager.extractionMode
-            
-            let result = try await ocrManager.recognizeText(from: image, configuration: configuration)
-            
+            let ocrConfiguration = configuration
+
+            let result = try await withTimeout(60) { [ocrManager, image, ocrConfiguration] in
+                try await ocrManager.recognizeText(from: image, configuration: ocrConfiguration)
+            }
+
             guard result.text.trimmingWhitespaceAndNewlines().isNotEmpty else {
                 appState.transition(to: .error(TextGrabError.ocrFailed("No text found in selection")))
                 return
             }
-            
+
             var outputText = result.text
             if #available(macOS 26.0, *),
                settingsManager.appleIntelligenceCorrection,
-               let appleIntelligence = appleIntelligence as? AppleIntelligenceService {
+               let appleIntelligenceService = appleIntelligence as? AppleIntelligenceService {
                 do {
-                    outputText = try await appleIntelligence.transform(
-                        result.text,
-                        operation: .correct,
-                        mode: settingsManager.extractionMode
-                    )
+                    let extractionMode = settingsManager.extractionMode
+                    outputText = try await withTimeout(30) {
+                        try await appleIntelligenceService.transform(
+                            result.text,
+                            operation: .correct,
+                            mode: extractionMode
+                        )
+                    }
                 } catch {
                     Logger.shared.error("Apple Intelligence correction skipped: \(error.localizedDescription)")
                 }
@@ -214,11 +233,14 @@ final class CaptureCoordinator: ObservableObject {
 
         appState.transition(to: .processing)
         do {
-            let transformed = try await appleIntelligence.transform(
-                text,
-                operation: operation,
-                mode: settingsManager.extractionMode
-            )
+            let extractionMode = settingsManager.extractionMode
+            let transformed = try await withTimeout(30) {
+                try await appleIntelligence.transform(
+                    text,
+                    operation: operation,
+                    mode: extractionMode
+                )
+            }
             let output = settingsManager.extractionMode == .code
                 ? CodeTextProcessor.removingMarkdownFences(transformed)
                 : transformed

@@ -56,7 +56,7 @@ final class AppleIntelligenceService {
 
         let response = try await session.respond(
             to: "\(task)\n\nTEXT:\n\(text)",
-            options: GenerationOptions(sampling: .greedy, temperature: 0, maximumResponseTokens: 2_000)
+            options: GenerationOptions(samplingMode: .greedy, temperature: 0, maximumResponseTokens: 2_000)
         )
         let result = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !result.isEmpty else { throw AppleIntelligenceError.emptyResponse }

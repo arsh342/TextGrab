@@ -42,9 +42,9 @@ struct GeneralSettingsView: View {
     
     var body: some View {
         Form {
-            Section("Global Shortcut") {
+            Section("Shortcuts") {
                 HStack {
-                    Text("Capture Shortcut:")
+                    Text("Capture text:")
                     Spacer()
                     Text(shortcutManager.currentShortcut)
                         .font(.system(.body, design: .monospaced))
@@ -56,7 +56,7 @@ struct GeneralSettingsView: View {
 
                 if isRecordingShortcut {
                     HStack {
-                        Text("Press a shortcut")
+                        Text("Press the new shortcut…")
                             .foregroundColor(.secondary)
                         ShortcutRecorderView { keyCode, modifiers, displayString in
                             do {
@@ -79,8 +79,8 @@ struct GeneralSettingsView: View {
             Section("Saved Area Shortcut") {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Capture Saved Area")
-                        Text("Copies text from the last selected area without selecting again.")
+                        Text("Capture saved area:")
+                        Text("Re-captures the last selected area — no need to drag again.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -95,7 +95,7 @@ struct GeneralSettingsView: View {
 
                 if isRecordingSavedShortcut {
                     HStack {
-                        Text("Press a shortcut")
+                        Text("Press the new shortcut…")
                             .foregroundColor(.secondary)
                         ShortcutRecorderView { keyCode, modifiers, displayString in
                             do {
@@ -115,7 +115,7 @@ struct GeneralSettingsView: View {
                 }
 
                 HStack {
-                    Text(settingsManager.savedRegion == nil ? "No area saved" : "Saved area ready")
+                    Text(settingsManager.savedRegion == nil ? "No area saved yet" : "Saved area ready")
                         .foregroundColor(.secondary)
                     Spacer()
                     if settingsManager.savedRegion != nil {
@@ -125,22 +125,23 @@ struct GeneralSettingsView: View {
                     }
                 }
             }
-            
+
             Section("Behavior") {
-                Toggle("Launch at login", isOn: $settingsManager.launchAtLogin)
-                Toggle("Show notifications", isOn: $settingsManager.showNotifications)
+                Toggle("Launch TextGrab at login", isOn: $settingsManager.launchAtLogin)
+                Toggle("Show a notification when text is copied", isOn: $settingsManager.showNotifications)
             }
-            
+
             Section("History") {
-                Toggle("Enable clipboard history", isOn: $settingsManager.enableHistory)
-                
+                Toggle("Keep a history of copied text", isOn: $settingsManager.enableHistory)
+                    .help("History stays on this Mac and survives relaunches")
+
                 if settingsManager.enableHistory {
-                    Stepper("Max items: \(settingsManager.maxHistorySize)", value: $settingsManager.maxHistorySize, in: 10...200, step: 10)
+                    Stepper("Keep up to \(settingsManager.maxHistorySize) items", value: $settingsManager.maxHistorySize, in: 10...200, step: 10)
                 }
             }
-            
+
             Section {
-                Button("Reset to Defaults", role: .destructive) {
+                Button("Reset All Settings", role: .destructive) {
                     settingsManager.resetToDefaults()
                     do {
                         try shortcutManager.updateShortcut(
@@ -172,19 +173,25 @@ struct OCRSettingsView: View {
     
     var body: some View {
         Form {
-            Section("Recognition") {
+            Section("Extraction") {
                 Picker("Extraction Mode", selection: $settingsManager.extractionMode) {
                     ForEach(OCRMode.allCases, id: \.self) { mode in
                         Text(mode.displayName).tag(mode)
                     }
                 }
+                .help("Text for prose, Code for snippets, Table for tabular data")
 
-                Picker("Recognition Level", selection: $settingsManager.recognitionLevel) {
+                Picker("Text Recognition Level", selection: $settingsManager.recognitionLevel) {
                     ForEach(OCRConfiguration.RecognitionLevel.allCases, id: \.self) { level in
                         Text(level.displayName).tag(level)
                     }
                 }
-                
+                .help("Fast is quicker; Accurate reads small or complex text better")
+
+                Text("Applies to Text mode — Code and Table always use accurate recognition.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
                 Toggle("Language Correction", isOn: $settingsManager.usesLanguageCorrection)
                     .help("Improves prose but may affect code/technical text")
 
@@ -215,7 +222,11 @@ struct OCRSettingsView: View {
                 }
             }
             
-            Section("Languages") {
+            Section("OCR Languages") {
+                Text("Recognize text in additional languages.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
                 ForEach(settingsManager.languages, id: \.self) { lang in
                     HStack {
                         Text(lang)
@@ -262,16 +273,16 @@ struct PermissionsSettingsView: View {
             Section("Required Permissions") {
                 PermissionRow(
                     title: "Screen Recording",
-                    description: "Required to capture screen content; relaunch TextGrab after granting",
+                    description: "Required to read the selected screen area. Grant it, then relaunch TextGrab.",
                     isGranted: permissionsManager.hasScreenRecordingPermission,
                     action: {
                         Task { _ = await permissionsManager.requestScreenRecordingPermission() }
                     }
                 )
-                
+
                 PermissionRow(
                     title: "Accessibility",
-                    description: "Optional; improves system keyboard integration",
+                    description: "Optional. Improves keyboard shortcut support in some apps.",
                     isGranted: permissionsManager.hasAccessibilityPermission,
                     action: {
                         _ = permissionsManager.requestAccessibilityPermission()
@@ -301,7 +312,7 @@ struct PermissionsSettingsView: View {
             }
             
             Section("Privacy") {
-                Text("TextGrab processes all OCR locally on your device. No data is sent to external servers.")
+                Text("All OCR runs locally on your Mac. Nothing you capture is sent to external servers.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -402,6 +413,7 @@ final class ShortcutRecorderNSView: NSView {
 
 struct AdvancedSettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
+    @EnvironmentObject var updateManager: UpdateManager
 
     private static let appVersion: String = {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -413,11 +425,46 @@ struct AdvancedSettingsView: View {
 
     var body: some View {
         Form {
-            Section("Debug") {
-                Toggle("Enable debug logging", isOn: .constant(false))
-                    .disabled(true)
+            Section("Updates") {
+                Toggle("Check for updates automatically", isOn: $settingsManager.checkForUpdatesAutomatically)
+                    .help("Checks GitHub Releases at most once a day")
+
+                HStack {
+                    Button("Check Now") {
+                        Task { await updateManager.checkForUpdates(automatically: false) }
+                    }
+                    .disabled(updateManager.isChecking)
+
+                    if updateManager.isChecking {
+                        ProgressView()
+                            .controlSize(.small)
+                    }
+                }
+
+                switch updateManager.state {
+                case .idle:
+                    EmptyView()
+                case .upToDate:
+                    Text("You're up to date (version \(updateManager.currentVersion)).")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                case .available(let info):
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("TextGrab \(info.version) is available.")
+                            .font(.callout)
+                        Button("Download Update") {
+                            Task { await updateManager.downloadAndOpenUpdate() }
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                case .failed(let message):
+                    Text("Update check failed: \(message)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
-            
+
             Section("About") {
                 HStack {
                     Text("Version")
@@ -435,6 +482,7 @@ struct AdvancedSettingsView: View {
             }
 
             Section {
+                Link("User Guide", destination: URL(string: "https://github.com/arsh342/TextGrab#readme")!)
                 Link("Privacy Policy", destination: URL(string: "https://github.com/arsh342/TextGrab#security")!)
                 Link("Source Code", destination: URL(string: "https://github.com/arsh342/TextGrab")!)
             }

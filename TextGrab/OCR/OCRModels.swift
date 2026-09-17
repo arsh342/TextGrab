@@ -9,9 +9,9 @@ enum OCRMode: String, CaseIterable {
 
     var displayName: String {
         switch self {
-        case .normal: return "Text"
-        case .code: return "Code"
-        case .table: return "Table"
+        case .normal: return String(localized: "Text")
+        case .code: return String(localized: "Code")
+        case .table: return String(localized: "Table")
         }
     }
 
@@ -61,9 +61,14 @@ struct OCRConfiguration {
 
 extension OCRConfiguration {
     func apply(to request: VNRecognizeTextRequest) {
-        request.recognitionLevel = recognitionLevel
+        // Code and table extraction are precision-critical: fast recognition
+        // misses isolated cells and digits, so they always use accurate.
+        // Text mode uses the configured level (fast by default).
+        request.recognitionLevel = mode == .normal ? recognitionLevel : .accurate
         request.recognitionLanguages = languages
-        request.usesLanguageCorrection = mode == .code ? false : usesLanguageCorrection
+        // Language correction is for prose. It can mangle code and rewrite
+        // or drop short tabular values, so it only applies to normal mode.
+        request.usesLanguageCorrection = mode == .normal ? usesLanguageCorrection : false
         request.customWords = customWords
         request.minimumTextHeight = minimumTextHeight
     }

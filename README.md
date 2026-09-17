@@ -4,6 +4,11 @@ Native macOS utility for extracting text from anywhere on the screen.
 
 **Tagline:** Instant screen-to-text for macOS.
 
+[![Download](https://img.shields.io/github/v/release/arsh342/TextGrab?style=for-the-badge&label=Download&logo=apple&color=success)](https://github.com/arsh342/TextGrab/releases/latest)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
+
+[Download the latest DMG →](https://github.com/arsh342/TextGrab/releases/latest)
+
 https://github.com/user-attachments/assets/a2b095a7-f1a2-421f-b2fb-fd32ead2211a
 
 ## Core Workflow
@@ -25,15 +30,18 @@ Shortcut → Select → Capture → OCR → Clipboard
 - **Saved area capture** — Secondary shortcut (`⌘⌥2` by default) to re-capture the last selected region without re-selecting
 - **Multi-monitor support** — Works across all connected displays
 - **Three extraction modes:**
-  - **Text** — General purpose text extraction with language correction
-  - **Code** — Optimized for code snippets (disables language correction)
-  - **Table** — Extracts tabular data as markdown/CSV
-- **Recognition levels** — Fast or Accurate (Vision framework)
+  - **Text** — General purpose text extraction with language correction (Fast or Accurate, Fast by default)
+  - **Code** — Optimized for code snippets: rebuilds indentation from layout, joins OCR-split punctuation, always uses Accurate recognition
+  - **Table** — Extracts tabular data as GitHub-flavored markdown: space-aligned and pipe-delimited columns, wrapped-cell and hyphen rejoining, always uses Accurate recognition
+- **Smart recognition policy** — Text mode is user-configurable (Fast/Accurate); Code and Table always run Accurate automatically since Fast misses isolated digits and small cells
+- **OCR robustness** — Auto-retry chain for tricky captures: Accurate retry and image inversion for white text on dark backgrounds (dark-mode IDEs, dark theme apps)
+- **Pipeline timeouts** — Capture, OCR, and AI steps are race-guarded so a hung system call can never leave the app stuck
 - **Multi-language OCR** — Add custom languages (e.g., `fr-FR`, `ja-JP`, `zh-Hans`)
 
 ### Clipboard & History
-- **Clipboard history** — Optional in-memory history with configurable max items (10–200)
+- **Clipboard history** — Optional history with configurable max items (10–200) that **survives app relaunches** (stored locally, bounded, wiped when disabled)
 - **One-click recopy** — Click any history item to copy it again
+- **Rich-text tables** — Markdown tables are also placed on the clipboard as HTML so pasting into Notes/Pages/Word preserves the table
 
 ### Text-to-Speech
 - **Speak captured text** — Built-in TTS with play/stop controls in the menu bar
@@ -45,20 +53,31 @@ Shortcut → Select → Capture → OCR → Clipboard
 - **Privacy-first** — All processing happens locally; no data leaves your Mac
 
 ### Menu Bar Interface
-- Quick access to capture, retry, history, and settings
-- Live extraction mode picker (Text/Code/Table)
-- Real-time processing status
+- Polished popover with material cards, a prominent Capture button, and hover highlights
+- Custom extraction mode selector (Text/Code/Table) with live switching
+- Real-time processing status and inline error reporting
+- Selectable last-capture preview, window nudged away from the screen edge
+
+### Auto-Updates
+- **GitHub Releases based** — Checks the latest release once a day on launch (opt-out toggle)
+- **Check Now** — Manual check in Settings with live status and semantic version comparison
+- **Download & install** — Downloads the DMG and opens it for drag-to-install; no signing infrastructure required
+- **Update notifications** — Notifies when a newer version is available
+
+### Localization
+- **5 languages** — English (source), Hindi (हिन्दी), French (Français), German (Deutsch), Spanish (Español)
+- The UI follows the system language automatically via String Catalogs
 
 ### Privacy & Permissions
 - **100% local processing** — No data sent to external servers
 - **Permission management** — Built-in UI for Screen Recording and Accessibility permissions
-- **Relaunch helper** — One-click app restart after granting permissions
+- **Relaunch helper** — One-click app restart after granting permissions (spawns a fresh instance)
 
 ### Settings
 - **General** — Shortcuts, notifications, history
 - **OCR** — Mode, recognition level, language correction, Apple Intelligence, languages
 - **Permissions** — Grant/check Screen Recording & Accessibility
-- **Advanced** — Version info, links to source/privacy
+- **Advanced** — Updates, version info, user guide, links to source/privacy
 
 ## Goals
 
@@ -74,9 +93,10 @@ Shortcut → Select → Capture → OCR → Clipboard
 
 - **Language:** Swift 5.9+
 - **UI:** SwiftUI + AppKit
-- **Frameworks:** Vision, ScreenCaptureKit, CoreGraphics, Foundation, Carbon (for global shortcuts)
+- **Frameworks:** Vision, ScreenCaptureKit, CoreGraphics, CoreImage, Foundation, Carbon (for global shortcuts), UserNotifications, AVFoundation, ServiceManagement, FoundationModels (Apple Intelligence, macOS 26+)
 - **Architecture:** MVVM with `@ObservableObject`/`@StateObject`
-- **Testing:** Swift Testing (unit), XCUITest (UI)
+- **Testing:** XCTest (unit), XCUITest (UI)
+- **External dependencies:** None
 
 ## Repository Layout
 
@@ -110,12 +130,14 @@ TextGrab/
 │   │   └── PermissionsManager.swift   # Screen Recording & Accessibility
 │   ├── Utilities/
 │   │   ├── AppleIntelligenceService.swift # macOS 26+ AI features
-│   │   ├── NotificationManager.swift  # User notifications
-│   │   ├── TextToSpeechManager.swift  # AVSpeechSynthesizer wrapper
-│   │   ├── Logger.swift               # OSLog wrapper
-│   │   └── Extensions.swift           # Shared extensions
+│   │   ├── UpdateManager.swift          # GitHub Releases auto-updater
+│   │   ├── NotificationManager.swift    # User notifications
+│   │   ├── TextToSpeechManager.swift    # AVSpeechSynthesizer wrapper
+│   │   ├── Logger.swift                 # OSLog wrapper
+│   │   └── Extensions.swift             # Shared extensions
 │   ├── Assets.xcassets/
-│   └── Supporting Files/
+│   ├── TextGrab.icon/                   # Icon Composer project (light/dark/tinted)
+│   └── Supporting Files/                # Info.plist, entitlements, Localizable.xcstrings
 ├── TextGrabTests/                     # Unit tests
 ├── TextGrabUITests/                   # UI tests
 ├── LICENSE
@@ -125,7 +147,7 @@ TextGrab/
 
 ## Development Status
 
-Current target: **v1.0 product build**
+Current target: **v1.1.0 product build**
 
 The complete local workflow is implemented:
 
@@ -142,38 +164,48 @@ Copy text
 ```
 
 ### Implemented
-- Menu bar application with popover
+- Menu bar application with polished popover UI
 - Global shortcut registration (Carbon)
 - Region selection overlay with multi-monitor support
-- Single-frame screen capture via ScreenCaptureKit
-- Vision OCR with 3 modes (Text/Code/Table)
-- Configurable recognition level & languages
+- Single-frame screen capture via ScreenCaptureKit with pipeline timeouts
+- Vision OCR with 3 modes (Text/Code/Table) and smart recognition policy
+- Code indentation/punctuation reconstruction and GitHub-style table output
+- OCR retry chain for white-on-dark captures and missed table cells
 - Text ordering/cleanup (reading order)
-- Clipboard output + optional bounded history
+- Clipboard output + bounded persistent history + HTML table flavor
 - Escape to cancel selection
-- Screen-capture & Accessibility permission handling
+- Screen-capture & Accessibility permission handling with working relaunch
 - Notifications
 - Text-to-speech
 - Apple Intelligence correction/summarize/compact (macOS 26+)
 - Settings persistence (UserDefaults)
-- Unit tests for text processing
+- Auto-updater via GitHub Releases
+- Localization: English, Hindi, French, German, Spanish
+- Dark mode app icon (Icon Composer, light/dark/tinted)
+- 12 unit tests + 2 UI tests
 
 ### In Progress / Planned
-- Code signing, notarization, distribution (DMG/pkg)
-- Sparkle updater integration
-- Localization
+- Developer ID code signing & notarization for distribution
+- QR/barcode detection
 
 ## Requirements
 
 - macOS 14.0+ (Sonoma)
-- Xcode 15.4+
+- Xcode 26+ (compiles the Icon Composer app icon)
 - Screen Recording permission (mandatory)
 - Accessibility permission (optional, improves keyboard integration)
 
 ## Building
 
 ```bash
-xcodebuild -project TextGrab.xcodeproj -scheme TextGrab -configuration Release
+# Debug build
+xcodebuild -project TextGrab.xcodeproj -scheme TextGrab -configuration Debug build
+
+# Release archive + DMG (outputs build/TextGrab-1.1.0.dmg)
+./scripts/build-release.sh
+
+# Run tests (12 unit + 2 UI)
+xcodebuild -project TextGrab.xcodeproj -scheme TextGrab -configuration Debug test
 ```
 
 ## License

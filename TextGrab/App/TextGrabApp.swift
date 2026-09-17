@@ -11,11 +11,12 @@ struct TextGrabApp: App {
     @StateObject private var clipboardManager: ClipboardManager
     @StateObject private var speechManager: TextToSpeechManager
     @StateObject private var notificationManager: NotificationManager
+    @StateObject private var updateManager: UpdateManager
     private let selectionController: SelectionController
     private let screenCapture: ScreenCaptureManager
     private let ocrManager: OCRManager
     @StateObject private var captureCoordinator: CaptureCoordinator
-    
+
     init() {
         let appState = AppState()
         let permissionsManager = PermissionsManager()
@@ -24,6 +25,7 @@ struct TextGrabApp: App {
         let clipboardManager = ClipboardManager(settings: settingsManager)
         let speechManager = TextToSpeechManager()
         let notificationManager = NotificationManager()
+        let updateManager = UpdateManager()
         let selectionController = SelectionController()
         let screenCapture = ScreenCaptureManager()
         let ocrManager = OCRManager()
@@ -34,6 +36,16 @@ struct TextGrabApp: App {
             appState.transition(to: .error(error))
         } catch {
             appState.transition(to: .error(TextGrabError.shortcutRegistrationFailed(error.localizedDescription)))
+        }
+
+        // Daily update check against GitHub Releases (opt-in, rate-limited).
+        Task { @MainActor in
+            if let update = await updateManager.checkForUpdates(automatically: true) {
+                notificationManager.notifyUpdateAvailable(
+                    version: update.version,
+                    enabled: settingsManager.showNotifications
+                )
+            }
         }
         
         let captureCoordinator = CaptureCoordinator(
@@ -54,6 +66,7 @@ struct TextGrabApp: App {
         self._clipboardManager = StateObject(wrappedValue: clipboardManager)
         self._speechManager = StateObject(wrappedValue: speechManager)
         self._notificationManager = StateObject(wrappedValue: notificationManager)
+        self._updateManager = StateObject(wrappedValue: updateManager)
         self.selectionController = selectionController
         self.screenCapture = screenCapture
         self.ocrManager = ocrManager
@@ -71,17 +84,19 @@ struct TextGrabApp: App {
                 .environmentObject(speechManager)
                 .environmentObject(notificationManager)
                 .environmentObject(captureCoordinator)
+                .environmentObject(updateManager)
         } label: {
             Image(systemName: "text.viewfinder")
                 .font(.system(size: 16, weight: .medium))
         }
         .menuBarExtraStyle(.window)
-        
+
         Settings {
             SettingsView()
                 .environmentObject(settingsManager)
                 .environmentObject(shortcutManager)
                 .environmentObject(permissionsManager)
+                .environmentObject(updateManager)
         }
     }
 }

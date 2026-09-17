@@ -10,15 +10,18 @@ protocol ClipboardService {
 final class ClipboardManager: ClipboardService, ObservableObject {
     @Published var lastCopiedText: String?
     @Published var history: [String] = []
-    
+
+    private static let historyDefaultsKey = "clipboardHistory"
     private var historyEnabled = false
     private var maxHistorySize = 50
     private let pasteboard = NSPasteboard.general
     private var settingsCancellable: AnyCancellable?
+    private var historyCancellable: AnyCancellable?
 
     init(settings: SettingsManager) {
         historyEnabled = settings.enableHistory
-        maxHistorySize = settings.maxHistorySize
+        maxHistorySize = max(1, settings.maxHistorySize)
+        history = Self.loadPersistedHistory(enabled: historyEnabled, limit: maxHistorySize)
         settingsCancellable = Publishers.CombineLatest(
             settings.$enableHistory,
             settings.$maxHistorySize
@@ -33,6 +36,12 @@ final class ClipboardManager: ClipboardService, ObservableObject {
                 self.history = Array(self.history.prefix(self.maxHistorySize))
             }
         }
+        historyCancellable = $history
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] items in
+                self?.persistHistory(items)
+            }
     }
     
     func copy(_ text: String) throws {
@@ -64,17 +73,39 @@ final class ClipboardManager: ClipboardService, ObservableObject {
         guard historyEnabled else { return }
         let trimmed = text.trimmingWhitespaceAndNewlines()
         guard trimmed.isNotEmpty else { return }
-        
+
         history.removeAll { $0 == trimmed }
         history.insert(trimmed, at: 0)
-        
+
         if history.count > maxHistorySize {
             history = Array(history.prefix(maxHistorySize))
         }
     }
-    
+
     func clearHistory() {
         history.removeAll()
+        UserDefaults.standard.removeObject(forKey: Self.historyDefaultsKey)
+    }
+
+    /// History survives app relaunches: bounded, opt-in, stored in UserDefaults.
+    private func persistHistory(_ items: [String]) {
+        guard historyEnabled, !items.isEmpty else {
+            UserDefaults.standard.removeObject(forKey: Self.historyDefaultsKey)
+            return
+        }
+        let bounded = Array(items.prefix(maxHistorySize))
+        if let data = try? JSONEncoder().encode(bounded) {
+            UserDefaults.standard.set(data, forKey: Self.historyDefaultsKey)
+        }
+    }
+
+    private static func loadPersistedHistory(enabled: Bool, limit: Int) -> [String] {
+        guard enabled,
+              let data = UserDefaults.standard.data(forKey: historyDefaultsKey),
+              let items = try? JSONDecoder().decode([String].self, from: data) else {
+            return []
+        }
+        return Array(items.prefix(limit))
     }
 }
 

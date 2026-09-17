@@ -124,14 +124,20 @@ final class PermissionsManager: ObservableObject, PermissionsService {
     }
 
     func relaunchApplication() {
-        let applicationURL = Bundle.main.bundleURL
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.activates = false
-
-        NSWorkspace.shared.openApplication(at: applicationURL, configuration: configuration) { _, _ in
-            DispatchQueue.main.async {
-                NSApp.terminate(nil)
-            }
+        // `openApplication` would only activate the already-running instance;
+        // `open -n` spawns a fresh process so permission changes take effect.
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = ["-n", Bundle.main.bundleURL.path]
+        do {
+            try process.run()
+        } catch {
+            Logger.shared.error("Relaunch failed: \(error.localizedDescription)")
+            return
+        }
+        // Give the new instance a moment to spawn before quitting this one.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            NSApp.terminate(nil)
         }
     }
 

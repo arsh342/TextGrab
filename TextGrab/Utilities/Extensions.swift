@@ -50,3 +50,23 @@ extension Array where Element == String {
         joined(separator: "\n")
     }
 }
+
+/// Races `operation` against a timer so a hung system call (ScreenCaptureKit,
+/// Vision, Foundation Models) can never leave the app stuck in `.processing`.
+func withTimeout<T: Sendable>(
+    _ seconds: TimeInterval,
+    operation: @escaping @Sendable () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask(operation: operation)
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw TextGrabError.operationTimedOut(seconds)
+        }
+        guard let result = try await group.next() else {
+            throw TextGrabError.operationTimedOut(seconds)
+        }
+        group.cancelAll()
+        return result
+    }
+}

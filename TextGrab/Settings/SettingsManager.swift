@@ -23,6 +23,8 @@ final class SettingsManager: ObservableObject {
         static let showNotifications = "showNotifications"
         static let enableHistory = "enableHistory"
         static let maxHistorySize = "maxHistorySize"
+        static let checkForUpdatesAutomatically = "checkForUpdatesAutomatically"
+        static let lastUpdateCheckDate = "lastUpdateCheckDate"
     }
     
     @Published var shortcut: String = "⌘⇧2" {
@@ -65,6 +67,21 @@ final class SettingsManager: ObservableObject {
         didSet { defaults.set(maxHistorySize, forKey: Keys.maxHistorySize) }
     }
 
+    @Published var checkForUpdatesAutomatically: Bool = true {
+        didSet { defaults.set(checkForUpdatesAutomatically, forKey: Keys.checkForUpdatesAutomatically) }
+    }
+
+    var lastUpdateCheckDate: Date? {
+        get { defaults.object(forKey: Keys.lastUpdateCheckDate) as? Date }
+        set {
+            if let newValue {
+                defaults.set(newValue, forKey: Keys.lastUpdateCheckDate)
+            } else {
+                defaults.removeObject(forKey: Keys.lastUpdateCheckDate)
+            }
+        }
+    }
+
     @Published private(set) var savedRegion: CGRect?
     @Published private(set) var savedDisplayID: CGDirectDisplayID?
     
@@ -84,6 +101,7 @@ final class SettingsManager: ObservableObject {
         showNotifications = defaults.object(forKey: Keys.showNotifications) as? Bool ?? true
         enableHistory = defaults.object(forKey: Keys.enableHistory) as? Bool ?? true
         maxHistorySize = min(max(defaults.object(forKey: Keys.maxHistorySize) as? Int ?? 50, 1), 500)
+        checkForUpdatesAutomatically = defaults.object(forKey: Keys.checkForUpdatesAutomatically) as? Bool ?? true
         if let value = defaults.string(forKey: Keys.savedRegion) {
             savedRegion = NSRectFromString(value)
         }
@@ -117,6 +135,7 @@ final class SettingsManager: ObservableObject {
         showNotifications = true
         enableHistory = true
         maxHistorySize = 50
+        checkForUpdatesAutomatically = true
         clearSavedRegion()
     }
 
@@ -146,8 +165,8 @@ extension OCRConfiguration {
         
         var displayName: String {
             switch self {
-            case .fast: return "Fast"
-            case .accurate: return "Accurate"
+            case .fast: return String(localized: "Fast")
+            case .accurate: return String(localized: "Accurate")
             }
         }
         

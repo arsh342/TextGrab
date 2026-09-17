@@ -1,8 +1,13 @@
 import XCTest
 
 final class TextGrabUITests: XCTestCase {
+    private let app = XCUIApplication(bundleIdentifier: "com.textgrab.TextGrab")
+
+    override func tearDown() {
+        app.terminate()
+    }
+
     func testMenuBarAppLaunches() {
-        let app = XCUIApplication(bundleIdentifier: "com.textgrab.TextGrab")
         app.launch()
 
         let statusItem = app.statusItems.firstMatch
@@ -10,14 +15,19 @@ final class TextGrabUITests: XCTestCase {
     }
 
     func testMenuBarContainsPrimaryActions() {
-        let app = XCUIApplication(bundleIdentifier: "com.textgrab.TextGrab")
         app.launch()
 
         let statusItem = app.statusItems.firstMatch
         XCTAssertTrue(statusItem.waitForExistence(timeout: 5))
         statusItem.click()
 
-        XCTAssertTrue(app.buttons["Capture Text"].waitForExistence(timeout: 3))
-        XCTAssertTrue(app.buttons["Settings..."].exists)
+        let captureButton = app.buttons["captureTextButton"]
+        if !captureButton.waitForExistence(timeout: 3) {
+            // The popover can fail to open if the click raced with the
+            // previous test's app instance; retry once.
+            statusItem.click()
+            XCTAssertTrue(captureButton.waitForExistence(timeout: 3))
+        }
+        XCTAssertTrue(app.buttons["settingsButton"].exists)
     }
 }

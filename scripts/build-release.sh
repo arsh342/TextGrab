@@ -8,7 +8,7 @@ CONFIGURATION="${CONFIGURATION:-Release}"
 ARCHIVE_PATH="${ARCHIVE_PATH:-$ROOT_DIR/build/TextGrab.xcarchive}"
 EXPORT_PATH="${EXPORT_PATH:-$ROOT_DIR/build/export}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$ROOT_DIR/build/DerivedData}"
-DMG_PATH="${DMG_PATH:-$ROOT_DIR/build/TextGrab-1.0.0.dmg}"
+DMG_PATH="${DMG_PATH:-$ROOT_DIR/build/TextGrab-1.1.0.dmg}"
 SCHEME="${SCHEME:-TextGrab}"
 
 mkdir -p "$(dirname "$ARCHIVE_PATH")"

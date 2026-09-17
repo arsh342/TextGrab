@@ -1,5 +1,13 @@
 {
-  "fill" : "automatic",
+  "fill-specializations" : [
+    {
+      "value" : "system-light"
+    },
+    {
+      "appearance" : "dark",
+      "value" : "system-dark"
+    }
+  ],
   "groups" : [
     {
       "layers" : [
@@ -13,9 +21,7 @@
             },
             {
               "appearance" : "tinted",
-              "value" : {
-                "solid" : "extended-gray:0.75000,1.00000"
-              }
+              "value" : "system-light"
             }
           ],
           "glass" : true,
@@ -45,32 +51,32 @@
         {
           "blend-mode-specializations" : [
             {
+              "appearance" : "dark",
+              "value" : "normal"
+            },
+            {
               "appearance" : "tinted",
               "value" : "normal"
             }
           ],
           "fill-specializations" : [
             {
-              "value" : {
-                "automatic-gradient" : "extended-gray:0.00000,1.00000"
-              }
+              "value" : "system-dark"
             },
             {
               "appearance" : "dark",
-              "value" : {
-                "automatic-gradient" : "extended-gray:1.00000,1.00000"
-              }
+              "value" : "system-light"
             },
             {
               "appearance" : "tinted",
-              "value" : {
-                "solid" : "extended-gray:0.75000,1.00000"
-              }
+              "value" : "system-dark"
             }
           ],
+          "glass" : true,
           "hidden" : false,
           "image-name" : "ChatGPT Image Sep 11, 2026, 11_10_22 AM.png",
           "name" : "ChatGPT Image Sep 11, 2026, 11_10_22 AM",
+          "opacity" : 1,
           "position" : {
             "scale" : 1,
             "translation-in-points" : [

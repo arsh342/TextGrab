@@ -208,6 +208,8 @@ xcodebuild -project TextGrab.xcodeproj -scheme TextGrab -configuration Debug bui
 xcodebuild -project TextGrab.xcodeproj -scheme TextGrab -configuration Debug test
 ```
 
+THIS IS NOT THE FINAL BUILD. SO, THERE MIGHT BE SOME BUGS YOU CAN EXPERIENCE.
+
 ## License
 
 MIT — see [LICENSE](LICENSE)

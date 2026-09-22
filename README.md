@@ -114,6 +114,12 @@ xcodebuild -project TextGrab.xcodeproj -scheme TextGrab -configuration Debug bui
 xcodebuild -project TextGrab.xcodeproj -scheme TextGrab -configuration Debug test
 ```
 
+### Known Issue: Screen Recording Permission After Updates
+
+Locally-built DMGs use ad-hoc signing. Each build gets a unique signature, so macOS treats updates as new apps and requires re-granting Screen Recording permission.
+
+**Workaround:** In System Settings → Privacy & Security → Screen Recording, toggle TextGrab **off then on** after updating.
+
 ## License
 
 MIT — see [LICENSE](LICENSE)

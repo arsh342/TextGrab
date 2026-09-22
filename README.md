@@ -113,6 +113,20 @@ xcodebuild -project TextGrab.xcodeproj -scheme TextGrab -configuration Debug bui
 # Run tests (12 unit + 2 UI)
 xcodebuild -project TextGrab.xcodeproj -scheme TextGrab -configuration Debug test
 ```
+## Installation (macOS Gatekeeper)
+
+Since TextGrab is open-source and not notarized, macOS will block it on first run.
+
+**Option 1 (Easiest):** 
+Right-click `TextGrab.app` → Select "Open" → Click "Open"
+
+**Option 2:** 
+Build from source — ./scripts/build-release.sh
+
+**Option 3 (Terminal):**
+```bash
+xattr -d com.apple.quarantine /Applications/TextGrab.app
+```
 
 ### Known Issue: Screen Recording Permission After Updates
 

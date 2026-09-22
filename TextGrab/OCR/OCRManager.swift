@@ -19,13 +19,17 @@ final class OCRManager: OCRService {
         let start = Date()
         Logger.shared.debug("Starting OCR recognition on image: \(image.width)x\(image.height)")
 
-        var result = try await performRecognition(from: image, configuration: configuration)
+        // Downsample once and reuse for all attempts
+        let workingImage = Self.downsampleIfNeeded(image)
+        Logger.shared.debug("Downsampled to: \(workingImage.width)x\(workingImage.height)")
+
+        var result = try await performRecognition(from: workingImage, configuration: configuration)
 
         // Code and table are always recognized at accurate level (forced in
         // OCRConfiguration.apply), so the accurate retry only helps when the
         // primary pass ran fast (text mode).
         let effectiveLevel: VNRequestTextRecognitionLevel = configuration.mode == .normal
-            ? configuration.recognitionLevel
+            ? configuration.recognitionLevel.vnLevel
             : .accurate
 
         if result.text.isEmpty, effectiveLevel != .accurate {
@@ -35,13 +39,13 @@ final class OCRManager: OCRService {
             retryConfiguration.recognitionLevel = .accurate
             retryConfiguration.usesLanguageCorrection = false
             Logger.shared.debug("OCR empty; retrying with accurate recognition")
-            result = try await performRecognition(from: image, configuration: retryConfiguration)
+            result = try await performRecognition(from: workingImage, configuration: retryConfiguration)
         }
 
         if result.text.isEmpty {
-            // Last resort: invert the image so light-on-dark text becomes
+            // Last resort: invert the downsampled image so light-on-dark text becomes
             // dark-on-light, which Vision recognizes reliably.
-            guard let inverted = Self.invertedImage(from: image) else { return result }
+            guard let inverted = Self.invertedImage(from: workingImage) else { return result }
             var retryConfiguration = configuration
             retryConfiguration.recognitionLevel = .accurate
             Logger.shared.debug("OCR empty; retrying with inverted image")
@@ -52,32 +56,41 @@ final class OCRManager: OCRService {
         return result
     }
 
-    private func performRecognition(from image: CGImage, configuration: OCRConfiguration) async throws -> OCRResult {
-        try await withCheckedThrowingContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async { [textProcessor] in
-                let workingImage = Self.downsampleIfNeeded(image)
-                let textRequest = VNRecognizeTextRequest()
-                configuration.apply(to: textRequest)
+private func performRecognition(from image: CGImage, configuration: OCRConfiguration) async throws -> OCRResult {
+        // Create request locally to avoid race conditions across concurrent calls
+        let textRequest = VNRecognizeTextRequest()
+        configuration.apply(to: textRequest)
+        let workingImage = Self.downsampleIfNeeded(image)
 
-                do {
-                    try VNImageRequestHandler(cgImage: workingImage, options: [:]).perform([textRequest])
-                    let observations = (textRequest.results ?? []).compactMap {
-                        observation -> OCRObservation? in
-                        guard let candidate = observation.topCandidates(1).first else { return nil }
-                        return OCRObservation(text: candidate.string, confidence: candidate.confidence, boundingBox: observation.boundingBox)
+        return try await withTaskCancellationHandler(
+            operation: {
+                try await withCheckedThrowingContinuation { continuation in
+                    DispatchQueue.global(qos: .userInitiated).async { [textProcessor] in
+                        do {
+                            try VNImageRequestHandler(cgImage: workingImage, options: [:]).perform([textRequest])
+                            let observations = (textRequest.results ?? []).compactMap {
+                                observation -> OCRObservation? in
+                                guard let candidate = observation.topCandidates(1).first else { return nil }
+                                return OCRObservation(text: candidate.string, confidence: candidate.confidence, boundingBox: observation.boundingBox)
+                            }
+
+                            let processor: TextProcessor = configuration.mode == .code
+                                ? CodeTextProcessor()
+                                : textProcessor
+                            let processedText = processor.process(observations: observations, mode: configuration.mode)
+                            let combinedText = processedText.trimmingWhitespaceAndNewlines()
+                            continuation.resume(returning: OCRResult(text: combinedText, observations: observations, detectedCodes: []))
+                        } catch {
+                            continuation.resume(throwing: TextGrabError.ocrFailed(error.localizedDescription))
+                        }
                     }
-
-                    let processor: TextProcessor = configuration.mode == .code
-                        ? CodeTextProcessor()
-                        : textProcessor
-                    let processedText = processor.process(observations: observations, mode: configuration.mode)
-                    let combinedText = processedText.trimmingWhitespaceAndNewlines()
-                    continuation.resume(returning: OCRResult(text: combinedText, observations: observations, detectedCodes: []))
-                } catch {
-                    continuation.resume(throwing: TextGrabError.ocrFailed(error.localizedDescription))
                 }
+            },
+            onCancel: {
+                // Cancel the in-flight Vision request if still running
+                textRequest.cancel()
             }
-        }
+        )
     }
 
     private static func invertedImage(from image: CGImage) -> CGImage? {

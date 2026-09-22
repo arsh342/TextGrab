@@ -32,7 +32,7 @@ TextGrab should:
 
 - Screenshots exist in memory only for the capture and OCR operation.
 - OCR output is copied to the local pasteboard and is not uploaded.
-- Clipboard history is optional, bounded, and held in memory only; disabling it clears the current history.
+- Clipboard history is optional, bounded, and **disabled by default**. When enabled, history is persisted to UserDefaults locally and survives app relaunches; disabling it clears the current history.
 - Apple Intelligence correction, summarization, and compaction are optional and use the on-device macOS model when available.
 - TextGrab has no telemetry, analytics, account service, or cloud OCR dependency.
 

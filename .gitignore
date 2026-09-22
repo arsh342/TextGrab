@@ -76,3 +76,5 @@ website/
 node_modules/
 dist/
 website/public/textgrab_vid.mp4
+
+AGENTS.md

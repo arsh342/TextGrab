@@ -6,24 +6,30 @@ struct SettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
     @EnvironmentObject var shortcutManager: GlobalShortcutManager
     @EnvironmentObject var permissionsManager: PermissionsManager
-    
+    @EnvironmentObject var clipboardManager: ClipboardManager
+
     var body: some View {
         TabView {
             GeneralSettingsView()
                 .tabItem {
                     Label("General", systemImage: "gear")
                 }
-            
+
             OCRSettingsView()
                 .tabItem {
                     Label("OCR", systemImage: "text.viewfinder")
                 }
-            
+
             PermissionsSettingsView()
                 .tabItem {
                     Label("Permissions", systemImage: "lock.shield")
                 }
-            
+
+            HistorySettingsView()
+                .tabItem {
+                    Label("History", systemImage: "clock.arrow.circlepath")
+                }
+
             AdvancedSettingsView()
                 .tabItem {
                     Label("Advanced", systemImage: "wrench.and.screwdriver")
@@ -39,7 +45,7 @@ struct GeneralSettingsView: View {
     @EnvironmentObject var shortcutManager: GlobalShortcutManager
     @State private var isRecordingShortcut = false
     @State private var isRecordingSavedShortcut = false
-    
+
     var body: some View {
         Form {
             Section("Shortcuts") {
@@ -115,10 +121,10 @@ struct GeneralSettingsView: View {
                 }
 
                 HStack {
-                    Text(settingsManager.savedRegion == nil ? "No area saved yet" : "Saved area ready")
+                    Text(settingsManager.hasSavedRegion ? "Saved area ready" : "No area saved yet")
                         .foregroundColor(.secondary)
                     Spacer()
-                    if settingsManager.savedRegion != nil {
+                    if settingsManager.hasSavedRegion {
                         Button("Clear") {
                             settingsManager.clearSavedRegion()
                         }
@@ -129,15 +135,6 @@ struct GeneralSettingsView: View {
             Section("Behavior") {
                 Toggle("Launch TextGrab at login", isOn: $settingsManager.launchAtLogin)
                 Toggle("Show a notification when text is copied", isOn: $settingsManager.showNotifications)
-            }
-
-            Section("History") {
-                Toggle("Keep a history of copied text", isOn: $settingsManager.enableHistory)
-                    .help("History stays on this Mac and survives relaunches")
-
-                if settingsManager.enableHistory {
-                    Stepper("Keep up to \(settingsManager.maxHistorySize) items", value: $settingsManager.maxHistorySize, in: 10...200, step: 10)
-                }
             }
 
             Section {
@@ -170,7 +167,7 @@ struct OCRSettingsView: View {
     @EnvironmentObject var settingsManager: SettingsManager
     @State private var newLanguage = ""
     @State private var appleIntelligenceAvailable = false
-    
+
     var body: some View {
         Form {
             Section("Extraction") {
@@ -188,7 +185,7 @@ struct OCRSettingsView: View {
                 }
                 .help("Fast is quicker; Accurate reads small or complex text better")
 
-                Text("Applies to Text mode — Code and Table always use accurate recognition.")
+                Text("For Fast extraction, switch to Fast recognition level.")
                     .font(.caption)
                     .foregroundColor(.secondary)
 
@@ -201,7 +198,7 @@ struct OCRSettingsView: View {
                         .help("Uses the on-device model to check likely OCR errors before copying")
 
                     if appleIntelligenceAvailable {
-                        Text("Checks OCR text on-device before copying.")
+                        Text("Checks OCR text on-device before copying. It may take longer than Fast recognition.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     } else {
@@ -221,7 +218,7 @@ struct OCRSettingsView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Section("OCR Languages") {
                 Text("Recognize text in additional languages.")
                     .font(.caption)
@@ -236,7 +233,7 @@ struct OCRSettingsView: View {
                 .onDelete { indexSet in
                     settingsManager.languages.remove(atOffsets: indexSet)
                 }
-                
+
                 HStack {
                     TextField("Add language (e.g., fr-FR)", text: $newLanguage)
                     Button("Add") {
@@ -267,7 +264,7 @@ struct OCRSettingsView: View {
 
 struct PermissionsSettingsView: View {
     @EnvironmentObject var permissionsManager: PermissionsManager
-    
+
     var body: some View {
         Form {
             Section("Required Permissions") {
@@ -277,15 +274,6 @@ struct PermissionsSettingsView: View {
                     isGranted: permissionsManager.hasScreenRecordingPermission,
                     action: {
                         Task { _ = await permissionsManager.requestScreenRecordingPermission() }
-                    }
-                )
-
-                PermissionRow(
-                    title: "Accessibility",
-                    description: "Optional. Improves keyboard shortcut support in some apps.",
-                    isGranted: permissionsManager.hasAccessibilityPermission,
-                    action: {
-                        _ = permissionsManager.requestAccessibilityPermission()
                     }
                 )
             }
@@ -304,18 +292,23 @@ struct PermissionsSettingsView: View {
                     }
                 }
             }
-            
+
             Section {
                 Button("Refresh Permissions") {
                     permissionsManager.checkPermissions()
                 }
             }
-            
+
             Section("Privacy") {
-                Text("All OCR runs locally on your Mac. Nothing you capture is sent to external servers.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("All OCR runs locally on your Mac. Nothing you capture is sent to external servers.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Link("Privacy Policy", destination: URL(string: "https://github.com/arsh342/TextGrab#security")!)
+                        .font(.caption)
+                }
             }
         }
         .formStyle(.grouped)
@@ -331,7 +324,7 @@ struct PermissionRow: View {
     let description: String
     let isGranted: Bool
     let action: () -> Void
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
@@ -341,13 +334,13 @@ struct PermissionRow: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            
+
             Spacer()
-            
+
             Image(systemName: isGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
                 .font(.title2)
                 .foregroundColor(isGranted ? .green : .red)
-            
+
             if !isGranted {
                 Button("Grant") {
                     action()
@@ -485,6 +478,87 @@ struct AdvancedSettingsView: View {
                 Link("User Guide", destination: URL(string: "https://github.com/arsh342/TextGrab#readme")!)
                 Link("Privacy Policy", destination: URL(string: "https://github.com/arsh342/TextGrab#security")!)
                 Link("Source Code", destination: URL(string: "https://github.com/arsh342/TextGrab")!)
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+struct HistorySettingsView: View {
+    @EnvironmentObject var clipboardManager: ClipboardManager
+    @EnvironmentObject var settingsManager: SettingsManager
+
+    var body: some View {
+        Form {
+            Section("History") {
+                Toggle("Keep a history of copied text", isOn: $settingsManager.enableHistory)
+                    .help("History stays on this Mac and survives relaunches")
+
+                if settingsManager.enableHistory {
+                    Stepper("Keep up to \(settingsManager.maxHistorySize) items in MenuBar", value: $settingsManager.maxHistorySize, in: 10...200, step: 10)
+                }
+
+                Button("Clear All History", role: .destructive) {
+                    clipboardManager.clearHistory()
+                }
+            }
+
+            Section("Recent Captures") {
+                if clipboardManager.history.isEmpty {
+                    Text("No captures yet")
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding()
+                } else {
+                    List {
+                        ForEach(Array(clipboardManager.history.enumerated()), id: \.offset) { index, item in
+                            HStack {
+                                Text("\(index + 1)")
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundColor(.secondary)
+                                    .frame(width: 24)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.text)
+                                        .font(.system(size: 11))
+                                        .lineLimit(2)
+                                        .truncationMode(.tail)
+
+                                    HStack(spacing: 8) {
+                                        Text(item.timestamp, style: .date)
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+
+                                        Text(item.timestamp, style: .time)
+                                            .font(.caption2)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+
+                                Spacer()
+
+                                Button {
+                                    try? clipboardManager.copy(item.text, extractionMode: .normal)
+                                } label: {
+                                    Image(systemName: "doc.on.doc")
+                                        .foregroundColor(.blue)
+                                }
+                                .buttonStyle(.plain)
+                                .help("Copy")
+
+                                Button {
+                                    clipboardManager.removeFromHistory(item)
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .foregroundColor(.red)
+                                }
+                                .buttonStyle(.plain)
+                                .help("Delete")
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+                }
             }
         }
         .formStyle(.grouped)

@@ -30,10 +30,19 @@ final class AppState: ObservableObject {
     @Published var lastCapturedText: String?
     @Published var lastError: TextGrabError?
 
+    private var transitionID: UInt64 = 0
+    private var resetTask: Task<Void, Never>?
+
     func transition(to newState: State) {
         Logger.shared.debug("State transition: \(stateName(currentState)) -> \(stateName(newState))")
+
+        // Cancel any pending reset task from previous transition
+        resetTask?.cancel()
+
         currentState = newState
-        
+        transitionID &+= 1
+        let currentTransitionID = transitionID
+
         switch newState {
         case .idle:
             isProcessing = false
@@ -50,17 +59,23 @@ final class AppState: ObservableObject {
         case .copied(let text):
             isProcessing = false
             lastCapturedText = text
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                if self.currentState == .copied(text) {
-                    self.transition(to: .idle)
+            resetTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                guard !Task.isCancelled else { return }
+                guard transitionID == currentTransitionID else { return }
+                if case .copied(let currentText) = currentState, currentText == text {
+                    transition(to: .idle)
                 }
             }
         case .error(let error):
             isProcessing = false
             lastError = error as? TextGrabError ?? TextGrabError.unknown(error)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                if case .error = self.currentState {
-                    self.transition(to: .idle)
+            resetTask = Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                guard !Task.isCancelled else { return }
+                guard transitionID == currentTransitionID else { return }
+                if case .error = currentState {
+                    transition(to: .idle)
                 }
             }
         }

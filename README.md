@@ -4,10 +4,13 @@ Native macOS utility for extracting text from anywhere on the screen.
 
 **Tagline:** Instant screen-to-text for macOS.
 
-[![Download](https://img.shields.io/github/v/release/arsh342/TextGrab?style=for-the-badge&label=Download&logo=apple&color=success)](https://github.com/arsh342/TextGrab/releases/latest)
+[![GitHub Release](https://img.shields.io/github/v/release/arsh342/TextGrab?label=Latest%20Release&style=for-the-badge&logo=apple&color=success)](https://github.com/arsh342/TextGrab/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-macOS%2014%2B-lightgrey?style=for-the-badge&logo=apple)](https://www.apple.com/macos/)
 
-[Download the latest DMG →](https://github.com/arsh342/TextGrab/releases/latest)
+[![Download Latest DMG](https://img.shields.io/badge/Download-DMG-blue?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/arsh342/TextGrab/releases/latest)
+
+---
 
 https://github.com/user-attachments/assets/a2b095a7-f1a2-421f-b2fb-fd32ead2211a
 
@@ -70,13 +73,13 @@ Shortcut → Select → Capture → OCR → Clipboard
 
 ### Privacy & Permissions
 - **100% local processing** — No data sent to external servers
-- **Permission management** — Built-in UI for Screen Recording and Accessibility permissions
+- **Permission management** — Built-in UI for Screen Recording
 - **Relaunch helper** — One-click app restart after granting permissions (spawns a fresh instance)
 
 ### Settings
 - **General** — Shortcuts, notifications, history
 - **OCR** — Mode, recognition level, language correction, Apple Intelligence, languages
-- **Permissions** — Grant/check Screen Recording & Accessibility
+- **Permissions** — Grant/check Screen Recording
 - **Advanced** — Updates, version info, user guide, links to source/privacy
 
 ## Goals
@@ -98,110 +101,13 @@ Shortcut → Select → Capture → OCR → Clipboard
 - **Testing:** XCTest (unit), XCUITest (UI)
 - **External dependencies:** None
 
-## Repository Layout
-
-```text
-TextGrab/
-├── TextGrab/
-│   ├── App/
-│   │   ├── AppDelegate.swift          # App lifecycle, menu bar setup
-│   │   ├── TextGrabApp.swift          # @main entry, DI container
-│   │   ├── AppState.swift             # Global state machine + errors
-│   │   └── CaptureCoordinator.swift   # Orchestrates capture→OCR→clipboard
-│   ├── Capture/
-│   │   └── ScreenCaptureManager.swift # ScreenCaptureKit wrapper
-│   ├── Selection/
-│   │   ├── SelectionController.swift  # Region selection overlay
-│   │   └── SelectionOverlayView.swift # SwiftUI overlay view
-│   ├── OCR/
-│   │   ├── OCRManager.swift           # Vision request execution
-│   │   ├── OCRModels.swift            # OCRMode, OCRConfiguration, results
-│   │   └── TextProcessor.swift        # Post-processing (ordering, cleanup)
-│   ├── Clipboard/
-│   │   └── ClipboardManager.swift     # Clipboard + history
-│   ├── Shortcut/
-│   │   └── GlobalShortcutManager.swift# Carbon hotkey registration
-│   ├── MenuBar/
-│   │   └── MenuBarView.swift          # Menu bar popover UI
-│   ├── Settings/
-│   │   ├── SettingsManager.swift      # UserDefaults persistence
-│   │   └── SettingsView.swift         # Tabbed settings (General/OCR/Permissions/Advanced)
-│   ├── Permissions/
-│   │   └── PermissionsManager.swift   # Screen Recording & Accessibility
-│   ├── Utilities/
-│   │   ├── AppleIntelligenceService.swift # macOS 26+ AI features
-│   │   ├── UpdateManager.swift          # GitHub Releases auto-updater
-│   │   ├── NotificationManager.swift    # User notifications
-│   │   ├── TextToSpeechManager.swift    # AVSpeechSynthesizer wrapper
-│   │   ├── Logger.swift                 # OSLog wrapper
-│   │   └── Extensions.swift             # Shared extensions
-│   ├── Assets.xcassets/
-│   ├── TextGrab.icon/                   # Icon Composer project (light/dark/tinted)
-│   └── Supporting Files/                # Info.plist, entitlements, Localizable.xcstrings
-├── TextGrabTests/                     # Unit tests
-├── TextGrabUITests/                   # UI tests
-├── LICENSE
-├── SECURITY.md
-└── README.md
-```
-
-## Development Status
-
-Current target: **v1.1.0 product build**
-
-The complete local workflow is implemented:
-
-```text
-⌘⇧2
-  ↓
-Selection overlay
-  ↓
-Capture selected region
-  ↓
-Vision OCR
-  ↓
-Copy text
-```
-
-### Implemented
-- Menu bar application with polished popover UI
-- Global shortcut registration (Carbon)
-- Region selection overlay with multi-monitor support
-- Single-frame screen capture via ScreenCaptureKit with pipeline timeouts
-- Vision OCR with 3 modes (Text/Code/Table) and smart recognition policy
-- Code indentation/punctuation reconstruction and GitHub-style table output
-- OCR retry chain for white-on-dark captures and missed table cells
-- Text ordering/cleanup (reading order)
-- Clipboard output + bounded persistent history + HTML table flavor
-- Escape to cancel selection
-- Screen-capture & Accessibility permission handling with working relaunch
-- Notifications
-- Text-to-speech
-- Apple Intelligence correction/summarize/compact (macOS 26+)
-- Settings persistence (UserDefaults)
-- Auto-updater via GitHub Releases
-- Localization: English, Hindi, French, German, Spanish
-- Dark mode app icon (Icon Composer, light/dark/tinted)
-- 12 unit tests + 2 UI tests
-
-### In Progress / Planned
-- Developer ID code signing & notarization for distribution
-- QR/barcode detection
-
-## Requirements
-
-- macOS 14.0+ (Sonoma)
-- Xcode 26+ (compiles the Icon Composer app icon)
-- Screen Recording permission (mandatory)
-- Accessibility permission (optional, improves keyboard integration)
-
 ## Building
 
 ```bash
 # Debug build
 xcodebuild -project TextGrab.xcodeproj -scheme TextGrab -configuration Debug build
 
-# Release archive + DMG (outputs build/TextGrab-1.1.0.dmg)
+# Release archive + DMG (outputs build/TextGrab-1.2.0.dmg)
 ./scripts/build-release.sh
 
 # Run tests (12 unit + 2 UI)

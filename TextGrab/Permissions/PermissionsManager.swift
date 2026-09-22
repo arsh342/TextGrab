@@ -1,35 +1,29 @@
 import Foundation
 import AppKit
-import ApplicationServices
 import CoreGraphics
 import Combine
 
 @MainActor
 protocol PermissionsService {
     var hasScreenRecordingPermission: Bool { get }
-    var hasAccessibilityPermission: Bool { get }
     func requestScreenRecordingPermission() async -> Bool
-    func requestAccessibilityPermission() -> Bool
     func openScreenRecordingSettings()
-    func openAccessibilitySettings()
 }
 
 @MainActor
 final class PermissionsManager: ObservableObject, PermissionsService {
     @Published var hasScreenRecordingPermission: Bool = false
-    @Published var hasAccessibilityPermission: Bool = false
     @Published var permissionStatus: PermissionStatus = .unknown
     private var activationObserver: NSObjectProtocol?
     private var wakeObserver: NSObjectProtocol?
-    
+
     enum PermissionStatus: Equatable {
         case unknown
         case checking
         case screenRecordingDenied
-        case accessibilityDenied
         case allGranted
     }
-    
+
     init() {
         checkPermissions()
         activationObserver = NotificationCenter.default.addObserver(
@@ -60,34 +54,26 @@ final class PermissionsManager: ObservableObject, PermissionsService {
             NotificationCenter.default.removeObserver(wakeObserver)
         }
     }
-    
+
     func checkPermissions() {
         permissionStatus = .checking
 
         let screenRecording = checkScreenRecordingPermission()
-        let accessibility = checkAccessibilityPermission()
         hasScreenRecordingPermission = screenRecording
-        hasAccessibilityPermission = accessibility
 
         if !screenRecording {
             permissionStatus = .screenRecordingDenied
-        } else if !accessibility {
-            permissionStatus = .accessibilityDenied
         } else {
             permissionStatus = .allGranted
         }
 
-        Logger.shared.debug("Permissions - Screen: \(screenRecording), Accessibility: \(accessibility)")
+        Logger.shared.debug("Permissions - Screen: \(screenRecording)")
     }
-    
+
     private func checkScreenRecordingPermission() -> Bool {
         CGPreflightScreenCaptureAccess()
     }
-    
-    private func checkAccessibilityPermission() -> Bool {
-        AXIsProcessTrusted()
-    }
-    
+
     func requestScreenRecordingPermission() async -> Bool {
         Logger.shared.info("Requesting screen recording permission")
         // This registers TextGrab in macOS Screen Recording settings. The
@@ -96,29 +82,11 @@ final class PermissionsManager: ObservableObject, PermissionsService {
         checkPermissions()
         return hasScreenRecordingPermission
     }
-    
-    func requestAccessibilityPermission() -> Bool {
-        Logger.shared.info("Requesting accessibility permission")
-        let options: NSDictionary = [
-            kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
-        ]
-        _ = AXIsProcessTrustedWithOptions(options)
-        checkPermissions()
-        return hasAccessibilityPermission
-    }
-    
+
     func openScreenRecordingSettings() {
         let urls = [
             "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_ScreenCapture",
             "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
-        ].compactMap(URL.init(string:))
-        openFirstAvailableSettingsURL(urls)
-    }
-    
-    func openAccessibilitySettings() {
-        let urls = [
-            "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility",
-            "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
         ].compactMap(URL.init(string:))
         openFirstAvailableSettingsURL(urls)
     }

@@ -15,18 +15,19 @@ struct TextGrabApp: App {
     private let selectionController: SelectionController
     private let screenCapture: ScreenCaptureManager
     private let ocrManager: OCRManager
+    private let pipeline: DefaultCapturePipeline
     @StateObject private var captureCoordinator: CaptureCoordinator
+    @StateObject private var menuBarViewModel: DefaultMenuBarViewModel
 
     init() {
         let appState = AppState()
         let permissionsManager = PermissionsManager()
         let shortcutManager = GlobalShortcutManager()
-        let settingsManager = SettingsManager()
+        let settingsManager = SettingsManager.shared
         let clipboardManager = ClipboardManager(settings: settingsManager)
         let speechManager = TextToSpeechManager()
         let notificationManager = NotificationManager()
-        let updateManager = UpdateManager()
-        let selectionController = SelectionController()
+        let updateManager = UpdateManager(settingsManager: settingsManager)
         let screenCapture = ScreenCaptureManager()
         let ocrManager = OCRManager()
 
@@ -47,18 +48,32 @@ struct TextGrabApp: App {
                 )
             }
         }
-        
-        let captureCoordinator = CaptureCoordinator(
-            selectionController: selectionController,
+
+        // Create selection controller
+        let selectionController = DefaultSelectionController.makeDefault()
+
+        let pipeline = DefaultCapturePipeline(
             screenCapture: screenCapture,
             ocrManager: ocrManager,
             clipboardManager: clipboardManager,
             permissionsManager: permissionsManager,
             settingsManager: settingsManager,
-            appState: appState,
-            notificationManager: notificationManager
+            notificationManager: notificationManager,
+            selectionController: selectionController,
+            appState: appState
         )
-        
+
+        let captureCoordinator = CaptureCoordinator(pipeline: pipeline)
+
+        let menuBarViewModel = DefaultMenuBarViewModel(
+            captureCoordinator: pipeline,
+            appState: appState,
+            shortcutManager: shortcutManager,
+            settingsManager: settingsManager,
+            clipboardManager: clipboardManager,
+            speechManager: speechManager
+        )
+
         self._appState = StateObject(wrappedValue: appState)
         self._permissionsManager = StateObject(wrappedValue: permissionsManager)
         self._shortcutManager = StateObject(wrappedValue: shortcutManager)
@@ -70,21 +85,14 @@ struct TextGrabApp: App {
         self.selectionController = selectionController
         self.screenCapture = screenCapture
         self.ocrManager = ocrManager
+        self.pipeline = pipeline
         self._captureCoordinator = StateObject(wrappedValue: captureCoordinator)
+        self._menuBarViewModel = StateObject(wrappedValue: menuBarViewModel)
     }
-    
+
     var body: some Scene {
         MenuBarExtra {
-            MenuBarView()
-                .environmentObject(appState)
-                .environmentObject(permissionsManager)
-                .environmentObject(shortcutManager)
-                .environmentObject(settingsManager)
-                .environmentObject(clipboardManager)
-                .environmentObject(speechManager)
-                .environmentObject(notificationManager)
-                .environmentObject(captureCoordinator)
-                .environmentObject(updateManager)
+            MenuBarView(viewModel: menuBarViewModel)
         } label: {
             Image(systemName: "text.viewfinder")
                 .font(.system(size: 16, weight: .medium))
@@ -97,6 +105,7 @@ struct TextGrabApp: App {
                 .environmentObject(shortcutManager)
                 .environmentObject(permissionsManager)
                 .environmentObject(updateManager)
+                .environmentObject(clipboardManager)
         }
     }
 }

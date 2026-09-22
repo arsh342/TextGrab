@@ -11,6 +11,16 @@
 		5A1B2C3D4E5F6A7B8C9D0E2F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D0E2A /* AppDelegate.swift */; };
 		5A1B2C3D4E5F6A7B8C9D0E3F /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D0E3A /* AppState.swift */; };
 		5A1B2C3D4E5F6A7B8C9D10EB /* CaptureCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D10EA /* CaptureCoordinator.swift */; };
+		5A1B2C3D4E5F6A7B8C9D1119 /* CapturePipeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D1118 /* CapturePipeline.swift */; };
+		5A1B2C3D4E5F6A7B8C9D111B /* MenuBarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D111A /* MenuBarViewModel.swift */; };
+		5A1B2C3D4E5F6A7B8C9D111D /* ShortcutConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D111C /* ShortcutConfig.swift */; };
+		5A1B2C3D4E5F6A7B8C9D111F /* OCRConfigStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D111E /* OCRConfigStore.swift */; };
+		5A1B2C3D4E5F6A7B8C9D1121 /* HistoryConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D1120 /* HistoryConfig.swift */; };
+		5A1B2C3D4E5F6A7B8C9D1123 /* AppearanceConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D1122 /* AppearanceConfig.swift */; };
+		5A1B2C3D4E5F6A7B8C9D1125 /* UpdateConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D1124 /* UpdateConfig.swift */; };
+		5A1B2C3D4E5F6A7B8C9D1127 /* SavedRegionConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D1126 /* SavedRegionConfig.swift */; };
+		5A1B2C3D4E5F6A7B8C9D1129 /* SelectionWindowManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D1128 /* SelectionWindowManager.swift */; };
+		5A1B2C3D4E5F6A7B8C9D112B /* SelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D112A /* SelectionController.swift */; };
 		5A1B2C3D4E5F6A7B8C9D0E5F /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D0E5A /* MenuBarView.swift */; };
 		5A1B2C3D4E5F6A7B8C9D0E6F /* GlobalShortcutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D0E6A /* GlobalShortcutManager.swift */; };
 		5A1B2C3D4E5F6A7B8C9D0E7F /* SelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1B2C3D4E5F6A7B8C9D0E7A /* SelectionController.swift */; };
@@ -42,6 +52,16 @@
 		5A1B2C3D4E5F6A7B8C9D0E2A /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		5A1B2C3D4E5F6A7B8C9D0E3A /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		5A1B2C3D4E5F6A7B8C9D10EA /* CaptureCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureCoordinator.swift; sourceTree = "<group>"; };
+		5A1B2C3D4E5F6A7B8C9D1118 /* CapturePipeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CapturePipeline.swift; sourceTree = "<group>"; };
+		5A1B2C3D4E5F6A7B8C9D111A /* MenuBarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarViewModel.swift; sourceTree = "<group>"; };
+		5A1B2C3D4E5F6A7B8C9D111C /* ShortcutConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutConfig.swift; sourceTree = "<group>"; };
+		5A1B2C3D4E5F6A7B8C9D111E /* OCRConfigStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRConfigStore.swift; sourceTree = "<group>"; };
+		5A1B2C3D4E5F6A7B8C9D1120 /* HistoryConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryConfig.swift; sourceTree = "<group>"; };
+		5A1B2C3D4E5F6A7B8C9D1122 /* AppearanceConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceConfig.swift; sourceTree = "<group>"; };
+		5A1B2C3D4E5F6A7B8C9D1124 /* UpdateConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateConfig.swift; sourceTree = "<group>"; };
+		5A1B2C3D4E5F6A7B8C9D1126 /* SavedRegionConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedRegionConfig.swift; sourceTree = "<group>"; };
+		5A1B2C3D4E5F6A7B8C9D1128 /* SelectionWindowManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionWindowManager.swift; sourceTree = "<group>"; };
+		5A1B2C3D4E5F6A7B8C9D112A /* SelectionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Selection/SelectionController.swift; sourceTree = "<group>"; };
 		5A1B2C3D4E5F6A7B8C9D0E5A /* MenuBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarView.swift; sourceTree = "<group>"; };
 		5A1B2C3D4E5F6A7B8C9D0E6A /* GlobalShortcutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalShortcutManager.swift; sourceTree = "<group>"; };
 		5A1B2C3D4E5F6A7B8C9D0E7A /* SelectionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionController.swift; sourceTree = "<group>"; };
@@ -134,6 +154,7 @@
 				5A1B2C3D4E5F6A7B8C9D0E2A /* AppDelegate.swift */,
 				5A1B2C3D4E5F6A7B8C9D0E3A /* AppState.swift */,
 				5A1B2C3D4E5F6A7B8C9D10EA /* CaptureCoordinator.swift */,
+				5A1B2C3D4E5F6A7B8C9D1118 /* CapturePipeline.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -142,6 +163,7 @@
 			isa = PBXGroup;
 			children = (
 				5A1B2C3D4E5F6A7B8C9D0E5A /* MenuBarView.swift */,
+				5A1B2C3D4E5F6A7B8C9D111A /* MenuBarViewModel.swift */,
 			);
 			path = MenuBar;
 			sourceTree = "<group>";
@@ -159,6 +181,7 @@
 			children = (
 				5A1B2C3D4E5F6A7B8C9D0E7A /* SelectionController.swift */,
 				5A1B2C3D4E5F6A7B8C9D0E8A /* SelectionOverlayView.swift */,
+				5A1B2C3D4E5F6A7B8C9D1128 /* SelectionWindowManager.swift */,
 			);
 			path = Selection;
 			sourceTree = "<group>";
@@ -202,6 +225,12 @@
 			children = (
 				5A1B2C3D4E5F6A7B8C9D0EEA /* SettingsManager.swift */,
 				5A1B2C3D4E5F6A7B8C9D10EC /* SettingsView.swift */,
+				5A1B2C3D4E5F6A7B8C9D111C /* ShortcutConfig.swift */,
+				5A1B2C3D4E5F6A7B8C9D111E /* OCRConfigStore.swift */,
+				5A1B2C3D4E5F6A7B8C9D1120 /* HistoryConfig.swift */,
+				5A1B2C3D4E5F6A7B8C9D1122 /* AppearanceConfig.swift */,
+				5A1B2C3D4E5F6A7B8C9D1124 /* UpdateConfig.swift */,
+				5A1B2C3D4E5F6A7B8C9D1126 /* SavedRegionConfig.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -345,10 +374,13 @@
 				5A1B2C3D4E5F6A7B8C9D0E2F /* AppDelegate.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D0E3F /* AppState.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D10EB /* CaptureCoordinator.swift in Sources */,
+				5A1B2C3D4E5F6A7B8C9D1119 /* CapturePipeline.swift in Sources */,
+				5A1B2C3D4E5F6A7B8C9D111B /* MenuBarViewModel.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D0E5F /* MenuBarView.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D0E6F /* GlobalShortcutManager.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D0E7F /* SelectionController.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D0E8F /* SelectionOverlayView.swift in Sources */,
+				5A1B2C3D4E5F6A7B8C9D1129 /* SelectionWindowManager.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D0E9F /* ScreenCaptureManager.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D0EAF /* OCRManager.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D0EBF /* TextProcessor.swift in Sources */,
@@ -356,6 +388,12 @@
 				5A1B2C3D4E5F6A7B8C9D0EDF /* PermissionsManager.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D0EEF /* SettingsManager.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D10ED /* SettingsView.swift in Sources */,
+				5A1B2C3D4E5F6A7B8C9D111D /* ShortcutConfig.swift in Sources */,
+				5A1B2C3D4E5F6A7B8C9D111F /* OCRConfigStore.swift in Sources */,
+				5A1B2C3D4E5F6A7B8C9D1121 /* HistoryConfig.swift in Sources */,
+				5A1B2C3D4E5F6A7B8C9D1123 /* AppearanceConfig.swift in Sources */,
+				5A1B2C3D4E5F6A7B8C9D1125 /* UpdateConfig.swift in Sources */,
+				5A1B2C3D4E5F6A7B8C9D1127 /* SavedRegionConfig.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D0EFF /* Logger.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D0F0F /* OCRModels.swift in Sources */,
 				5A1B2C3D4E5F6A7B8C9D0F1F /* Extensions.swift in Sources */,

@@ -2,13 +2,13 @@ import SwiftUI
 import CoreGraphics
 
 struct SelectionOverlayView: View {
-    let onSelectionComplete: (CGRect) -> Void
-    let onCancel: () -> Void
-    
     @State private var startPoint: CGPoint?
     @State private var currentRect: CGRect = .zero
     @State private var isSelecting: Bool = false
-    
+
+    var onSelectionComplete: (CGRect) -> Void = { _ in }
+    var onCancel: () -> Void = { }
+
     var body: some View {
         GeometryReader { geometry in
             ZStack {
@@ -19,7 +19,7 @@ struct SelectionOverlayView: View {
                             onCancel()
                         }
                     }
-                
+
                 if isSelecting || currentRect != .zero {
                     Rectangle()
                         .stroke(Color.accentColor, lineWidth: 2)
@@ -39,7 +39,7 @@ struct SelectionOverlayView: View {
                             }
                         }
                 }
-                
+
                 Text(instructionsText)
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.white.opacity(0.8))
@@ -67,7 +67,7 @@ struct SelectionOverlayView: View {
         }
         .ignoresSafeArea()
     }
-    
+
     private var instructionsText: String {
         if isSelecting {
             return "Drag to select area • Release to capture • Esc to cancel"
@@ -75,35 +75,63 @@ struct SelectionOverlayView: View {
             return "Click and drag to select text area • Esc to cancel"
         }
     }
-    
+
     private func handleDragChanged(_ value: DragGesture.Value, in size: CGSize) {
         if startPoint == nil {
             startPoint = value.startLocation
             isSelecting = true
         }
-        
+
         guard let start = startPoint else { return }
-        
-        let x = min(start.x, value.location.x)
-        let y = min(start.y, value.location.y)
-        let width = abs(value.location.x - start.x)
-        let height = abs(value.location.y - start.y)
-        
+
+        // Clamp both start and end points to bounds first
+        let clampedStartX = max(0, min(start.x, size.width))
+        let clampedStartY = max(0, min(start.y, size.height))
+        let clampedEndX = max(0, min(value.location.x, size.width))
+        let clampedEndY = max(0, min(value.location.y, size.height))
+
+        // Compute rect from clamped endpoints
+        let x = min(clampedStartX, clampedEndX)
+        let y = min(clampedStartY, clampedEndY)
+        let width = abs(clampedEndX - clampedStartX)
+        let height = abs(clampedEndY - clampedStartY)
+
         currentRect = CGRect(x: x, y: y, width: width, height: height)
     }
-    
+
     private func handleDragEnded(_ value: DragGesture.Value, in size: CGSize) {
         guard isSelecting, currentRect.width > 10, currentRect.height > 10 else {
             resetSelection()
             return
         }
-        
-        onSelectionComplete(currentRect)
+
+        // Final clamp to ensure validity (should already be clamped, but double-check)
+        let clampedRect = currentRect.intersection(CGRect(origin: .zero, size: size))
+        guard clampedRect.width > 10, clampedRect.height > 10 else {
+            resetSelection()
+            return
+        }
+
+        onSelectionComplete(clampedRect)
     }
-    
+
     private func resetSelection() {
         startPoint = nil
         currentRect = .zero
         isSelecting = false
+    }
+}
+
+extension SelectionOverlayView {
+    func onSelectionComplete(_ action: @escaping (CGRect) -> Void) -> SelectionOverlayView {
+        var copy = self
+        copy.onSelectionComplete = action
+        return copy
+    }
+
+    func onCancel(_ action: @escaping () -> Void) -> SelectionOverlayView {
+        var copy = self
+        copy.onCancel = action
+        return copy
     }
 }

@@ -80,7 +80,7 @@ final class TextProcessorTests: XCTestCase {
 
         XCTAssertEqual(
             processor.process(observations: observations, mode: .table),
-            "| Name  | Email |\n| ----- | ----- |\n| Alice | x     |"
+            "| Name  |  |   | Email |\n| ----- | --- | --- | ----- |\n| Alice |  | x |       |"
         )
     }
 

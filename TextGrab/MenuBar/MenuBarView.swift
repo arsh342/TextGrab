@@ -3,12 +3,11 @@ import SwiftUI
 struct MenuBarView: View {
     @Environment(\.openSettings) private var openSettings
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var appState: AppState
-    @EnvironmentObject var shortcutManager: GlobalShortcutManager
-    @EnvironmentObject var settingsManager: SettingsManager
-    @EnvironmentObject var clipboardManager: ClipboardManager
-    @EnvironmentObject var speechManager: TextToSpeechManager
-    @EnvironmentObject var captureCoordinator: CaptureCoordinator
+    @StateObject private var viewModel: DefaultMenuBarViewModel
+
+    init(viewModel: DefaultMenuBarViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -20,25 +19,25 @@ struct MenuBarView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     actionRow
 
-                    if appState.isProcessing {
+                    if viewModel.isProcessing {
                         progressView
                     }
 
-                    if let error = appState.lastError {
+                    if let error = viewModel.lastError {
                         errorView(error)
                     }
 
-                    if let text = appState.lastCapturedText {
+                    if let text = viewModel.lastCapture {
                         lastCaptureView(text)
                     }
 
-                    if settingsManager.enableHistory && !clipboardManager.history.isEmpty {
+                    if viewModel.enableHistory && !viewModel.history.isEmpty {
                         historyView
                     }
                 }
                 .padding(14)
-                .animation(.snappy(duration: 0.18), value: appState.isProcessing)
-                .animation(.snappy(duration: 0.18), value: clipboardManager.history)
+                .animation(.snappy(duration: 0.18), value: viewModel.isProcessing)
+                .animation(.snappy(duration: 0.18), value: viewModel.history)
             }
 
             Divider()
@@ -63,15 +62,13 @@ struct MenuBarView: View {
         HStack(spacing: 8) {
             Button {
                 dismiss()
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(name: .triggerCapture, object: nil)
-                }
+                viewModel.captureAction()
             } label: {
                 HStack(spacing: 6) {
                     Image(systemName: "camera.viewfinder")
                     Text("Capture Text")
                     Spacer()
-                    Text(shortcutManager.currentShortcut)
+                    Text(viewModel.currentShortcut)
                         .font(.caption2.monospacedDigit())
                         .opacity(0.8)
                 }
@@ -79,22 +76,20 @@ struct MenuBarView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(appState.isProcessing)
+            .disabled(viewModel.isProcessing)
             .accessibilityIdentifier("captureTextButton")
             .help("Select a region of the screen and copy its text")
 
             Button {
                 dismiss()
-                Task { @MainActor in
-                    await captureCoordinator.retryLastCapture()
-                }
+                viewModel.retryAction()
             } label: {
                 Label("Retry", systemImage: "arrow.clockwise")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
             .controlSize(.large)
-            .disabled(settingsManager.savedRegion == nil || appState.isProcessing)
+            .disabled(!viewModel.hasSavedRegion || viewModel.isProcessing)
             .help("Capture the last selected area again")
         }
     }
@@ -114,9 +109,9 @@ struct MenuBarView: View {
     }
 
     private func modeSegment(for mode: OCRMode) -> some View {
-        let isSelected = mode == settingsManager.extractionMode
+        let isSelected = mode == viewModel.extractionMode
         return Button {
-            settingsManager.extractionMode = mode
+            viewModel.extractionMode = mode
         } label: {
             Label(mode.displayName, systemImage: mode.systemImage)
                 .font(.caption.weight(isSelected ? .semibold : .regular))
@@ -143,7 +138,7 @@ struct MenuBarView: View {
         HStack(spacing: 8) {
             ProgressView()
                 .controlSize(.small)
-            Text(processingText)
+            Text(viewModel.processingText)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
@@ -152,15 +147,6 @@ struct MenuBarView: View {
         .padding(.vertical, 7)
         .background(.regularMaterial, in: Capsule())
         .transition(.opacity.combined(with: .move(edge: .top)))
-    }
-
-    private var processingText: String {
-        switch appState.currentState {
-        case .selecting: return String(localized: "Select area...")
-        case .capturing: return String(localized: "Capturing screen...")
-        case .processing: return String(localized: "Recognizing text...")
-        default: return String(localized: "Processing...")
-        }
     }
 
     private func errorView(_ error: TextGrabError) -> some View {
@@ -190,7 +176,7 @@ struct MenuBarView: View {
                     .foregroundStyle(.secondary)
                 Spacer()
                 Button {
-                    copy(text)
+                    viewModel.copyText(text)
                 } label: {
                     Label("Copy", systemImage: "doc.on.doc")
                 }
@@ -198,15 +184,15 @@ struct MenuBarView: View {
                 .controlSize(.small)
 
                 Button {
-                    if speechManager.isSpeaking {
-                        speechManager.stop()
+                    if viewModel.isSpeaking {
+                        viewModel.stopSpeaking()
                     } else {
-                        speechManager.speak(text)
+                        viewModel.speakLastCapture()
                     }
                 } label: {
                     Label(
-                        speechManager.isSpeaking ? "Stop" : "Speak",
-                        systemImage: speechManager.isSpeaking ? "stop.fill" : "speaker.wave.2.fill"
+                        viewModel.isSpeaking ? "Stop" : "Speak",
+                        systemImage: viewModel.isSpeaking ? "stop.fill" : "speaker.wave.2.fill"
                     )
                 }
                 .font(.caption)
@@ -229,26 +215,34 @@ struct MenuBarView: View {
             if #available(macOS 26.0, *), AppleIntelligenceService.isAvailable {
                 HStack(spacing: 6) {
                     Button {
-                        Task { @MainActor in
-                            await captureCoordinator.transformLastCapture(.summarize)
-                        }
+                        viewModel.transformLast(.summarize)
                     } label: {
-                        Label("Summarize", systemImage: "list.bullet.indent")
+                        if viewModel.isTransforming && viewModel.transformingOperation == .summarize {
+                            ProgressView()
+                                .controlSize(.small)
+                                .frame(width: 14, height: 14)
+                        } else {
+                            Label("Summarize", systemImage: "list.bullet.indent")
+                        }
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .disabled(appState.isProcessing)
+                    .disabled(viewModel.isProcessing || viewModel.isTransforming)
 
                     Button {
-                        Task { @MainActor in
-                            await captureCoordinator.transformLastCapture(.compact)
-                        }
+                        viewModel.transformLast(.compact)
                     } label: {
-                        Label("Compact", systemImage: "arrow.down.right.and.arrow.up.left")
+                        if viewModel.isTransforming && viewModel.transformingOperation == .compact {
+                            ProgressView()
+                                .controlSize(.small)
+                                .frame(width: 14, height: 14)
+                        } else {
+                            Label("Compact", systemImage: "arrow.down.right.and.arrow.up.left")
+                        }
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
-                    .disabled(appState.isProcessing)
+                    .disabled(viewModel.isProcessing || viewModel.isTransforming)
                 }
             }
         }
@@ -267,15 +261,17 @@ struct MenuBarView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Clear") { clipboardManager.clearHistory() }
+                Button("Clear") { viewModel.clearHistory() }
                     .font(.caption)
                     .controlSize(.small)
             }
 
-            ForEach(Array(clipboardManager.history.prefix(20).enumerated()), id: \.offset) { index, item in
-                HistoryRow(index: index, text: historyPreview(item)) {
-                    copy(item)
-                }
+            ForEach(Array(viewModel.history.prefix(viewModel.maxHistorySize).enumerated()), id: \.offset) { index, item in
+                HistoryRow(index: index, item: item, onCopy: {
+                    viewModel.copyFromHistory(item)
+                }, onDelete: {
+                    viewModel.deleteFromHistory(item)
+                })
             }
         }
     }
@@ -285,16 +281,6 @@ struct MenuBarView: View {
             .split(whereSeparator: \.isNewline)
             .joined(separator: "  ·  ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func copy(_ text: String) {
-        do {
-            try clipboardManager.copy(text)
-        } catch let error as TextGrabError {
-            appState.transition(to: .error(error))
-        } catch {
-            appState.transition(to: .error(TextGrabError.clipboardFailed(error.localizedDescription)))
-        }
     }
 
     private var footerView: some View {
@@ -320,49 +306,58 @@ struct MenuBarView: View {
 
 private struct HistoryRow: View {
     let index: Int
-    let text: String
+    let item: HistoryItem
     let onCopy: () -> Void
+    let onDelete: () -> Void
     @State private var isHovering = false
 
     var body: some View {
-        Button(action: onCopy) {
-            HStack(spacing: 8) {
-                Text("\(index + 1)")
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .frame(width: 16)
+        HStack(spacing: 8) {
+            Text("\(index + 1)")
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(width: 16)
 
-                Text(text)
-                    .font(.system(size: 11))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            Text(item.text)
+                .font(.system(size: 11))
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
+            Button(action: onCopy) {
                 Image(systemName: "doc.on.doc")
                     .font(.caption2)
                     .foregroundStyle(isHovering ? Color.primary : Color.secondary)
             }
-            .padding(.horizontal, 8)
-            .frame(minHeight: 30)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(
-                        isHovering
-                            ? Color.accentColor.opacity(0.15)
-                            : Color(nsColor: .textBackgroundColor).opacity(0.55)
-                    )
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .strokeBorder(
-                        isHovering ? Color.accentColor.opacity(0.3) : Color.primary.opacity(0.08),
-                        lineWidth: 1
-                    )
-            )
+            .buttonStyle(.plain)
+            .help("Copy")
+
+            Button(action: onDelete) {
+                Image(systemName: "trash")
+                    .font(.caption2)
+                    .foregroundStyle(isHovering ? Color.red : Color.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Delete")
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 8)
+        .frame(minHeight: 30)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(
+                    isHovering
+                        ? Color.accentColor.opacity(0.15)
+                        : Color(nsColor: .textBackgroundColor).opacity(0.55)
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .strokeBorder(
+                    isHovering ? Color.accentColor.opacity(0.3) : Color.primary.opacity(0.08),
+                    lineWidth: 1
+                )
+        )
         .onHover { isHovering = $0 }
-        .help("Copy capture \(index + 1)")
     }
 }
 

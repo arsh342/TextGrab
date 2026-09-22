@@ -4,24 +4,50 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+# Mode: "local" (ad-hoc, for testing) or "dist" (Developer ID, for distribution)
+MODE="${MODE:-local}"
 CONFIGURATION="${CONFIGURATION:-Release}"
 ARCHIVE_PATH="${ARCHIVE_PATH:-$ROOT_DIR/build/TextGrab.xcarchive}"
 EXPORT_PATH="${EXPORT_PATH:-$ROOT_DIR/build/export}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$ROOT_DIR/build/DerivedData}"
-DMG_PATH="${DMG_PATH:-$ROOT_DIR/build/TextGrab-1.1.0.dmg}"
 SCHEME="${SCHEME:-TextGrab}"
+
+# Version derived from project (or override)
+VERSION="${VERSION:-}"
+if [[ -z "$VERSION" ]]; then
+    # Use Info.plist as the authoritative source (more reliable than build settings)
+    VERSION=$(plutil -extract CFBundleShortVersionString raw "$ROOT_DIR/TextGrab/Supporting Files/Info.plist" 2>/dev/null || echo "")
+fi
+VERSION="${VERSION:-1.2.0}"
+DMG_PATH="${DMG_PATH:-$ROOT_DIR/build/TextGrab-${VERSION}.dmg}"
 
 mkdir -p "$(dirname "$ARCHIVE_PATH")"
 
-SIGNING_ARGS=("CODE_SIGNING_ALLOWED=${CODE_SIGNING_ALLOWED:-YES}")
-if [[ -n "${DEVELOPMENT_TEAM:-}" ]]; then
-  SIGNING_ARGS+=("DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM")
-fi
-if [[ -n "${CODE_SIGN_IDENTITY:-}" ]]; then
-  SIGNING_ARGS+=("CODE_SIGN_IDENTITY=$CODE_SIGN_IDENTITY")
-elif [[ -z "${DEVELOPMENT_TEAM:-}" && "${CODE_SIGNING_ALLOWED:-YES}" == "YES" ]]; then
-  SIGNING_ARGS+=("CODE_SIGN_IDENTITY=-")
-fi
+SIGNING_ARGS=()
+case "$MODE" in
+    local)
+        SIGNING_ARGS+=("CODE_SIGNING_ALLOWED=YES")
+        SIGNING_ARGS+=("CODE_SIGN_IDENTITY=-")
+        ;;
+    dist)
+        # Distribution mode requires explicit Developer ID
+        if [[ -z "${DEVELOPMENT_TEAM:-}" ]]; then
+            echo "ERROR: DEVELOPMENT_TEAM must be set for distribution mode" >&2
+            exit 1
+        fi
+        if [[ -z "${CODE_SIGN_IDENTITY:-}" ]]; then
+            echo "ERROR: CODE_SIGN_IDENTITY must be set for distribution mode" >&2
+            exit 1
+        fi
+        SIGNING_ARGS+=("CODE_SIGNING_ALLOWED=YES")
+        SIGNING_ARGS+=("DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM")
+        SIGNING_ARGS+=("CODE_SIGN_IDENTITY=$CODE_SIGN_IDENTITY")
+        ;;
+    *)
+        echo "ERROR: MODE must be 'local' or 'dist'" >&2
+        exit 1
+        ;;
+esac
 
 xcodebuild archive \
   -project TextGrab.xcodeproj \
@@ -48,6 +74,15 @@ if [[ -f "$EXPORT_PATH/TextGrab.app/Contents/Info.plist" ]]; then
   APP_PATH="$EXPORT_PATH/TextGrab.app"
 fi
 
+# Verify code signature in distribution mode
+if [[ "$MODE" == "dist" ]]; then
+  if ! codesign --verify --deep --strict "$APP_PATH" 2>/dev/null; then
+    echo "ERROR: Code signature verification failed for $APP_PATH" >&2
+    exit 1
+  fi
+  printf 'Code signature verified for %s\n' "$APP_PATH"
+fi
+
 DMG_STAGING="${TMPDIR:-/tmp}/textgrab-dmg-staging"
 DMG_MOUNT="/Volumes/TextGrab"
 RW_DMG_PATH="${DMG_PATH%.dmg}.rw.dmg"
@@ -56,8 +91,10 @@ mkdir -p "$DMG_STAGING"
 ditto "$APP_PATH" "$DMG_STAGING/TextGrab.app"
 ln -s /Applications "$DMG_STAGING/Applications"
 mkdir -p "$DMG_STAGING/.background"
-sips -z 440 720 "$ROOT_DIR/resources/dmg-background.png" \
-  --out "$DMG_STAGING/.background/dmg-background.png" >/dev/null
+if [[ -f "$ROOT_DIR/resources/dmg-background.png" ]]; then
+  sips -z 440 720 "$ROOT_DIR/resources/dmg-background.png" \
+    --out "$DMG_STAGING/.background/dmg-background.png" >/dev/null
+fi
 mkdir -p "$(dirname "$DMG_PATH")"
 rm -f "$DMG_PATH"
 hdiutil create \
@@ -112,9 +149,14 @@ rm -f "$RW_DMG_PATH"
 rm -rf "$DMG_STAGING"
 
 hdiutil verify "$DMG_PATH" >/dev/null
-if codesign --verify --deep --strict "$APP_PATH" 2>/dev/null; then
-  printf 'Code signature verified for %s\n' "$APP_PATH"
-else
-  printf 'App is unsigned; use CODE_SIGNING_ALLOWED=YES with a Developer ID identity before distribution.\n'
-fi
 printf 'Created DMG at %s\n' "$DMG_PATH"
+
+# Final verification in distribution mode
+if [[ "$MODE" == "dist" ]]; then
+  if codesign --verify --deep --strict "$APP_PATH" 2>/dev/null; then
+    printf 'Code signature verified for %s\n' "$APP_PATH"
+  else
+    printf 'ERROR: Final code signature check failed\n' >&2
+    exit 1
+  fi
+fi

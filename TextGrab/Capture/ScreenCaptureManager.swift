@@ -2,6 +2,7 @@ import Foundation
 import ScreenCaptureKit
 import CoreGraphics
 import AppKit
+import Combine
 
 /// Sendable snapshot of an NSScreen's capture-relevant properties, so the
 /// capture can run inside a `@Sendable` closure without capturing NSScreen.
@@ -12,12 +13,32 @@ struct DisplayInfo: Sendable {
     let localizedName: String
 }
 
-protocol ScreenCaptureService {
+protocol ScreenCaptureService: Actor {
     func capture(display: DisplayInfo, region: CGRect) async throws -> CGImage
+    func invalidateCache() async
 }
 
-final class ScreenCaptureManager: ScreenCaptureService {
+actor ScreenCaptureManager: ScreenCaptureService {
     private var availableContent: SCShareableContent?
+    private var contentLoadTask: Task<SCShareableContent, Error>?
+    private var displayChangeObserver: NSObjectProtocol?
+
+    init() {
+        // Observe screen parameter changes to invalidate cache
+        displayChangeObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { await self?.invalidateCache() }
+        }
+    }
+
+    deinit {
+        if let observer = displayChangeObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
 
     func capture(display: DisplayInfo, region: CGRect) async throws -> CGImage {
         Logger.shared.debug("Capturing screen region: \(region) on display: \(display.localizedName)")
@@ -25,7 +46,7 @@ final class ScreenCaptureManager: ScreenCaptureService {
         var content = try await getShareableContent()
         var scDisplay = content.displays.first(where: { $0.displayID == display.displayID })
         if scDisplay == nil {
-            await refreshAvailableContent()
+            await invalidateCache()
             content = try await getShareableContent()
             scDisplay = content.displays.first(where: { $0.displayID == display.displayID })
         }
@@ -60,22 +81,45 @@ final class ScreenCaptureManager: ScreenCaptureService {
         Logger.shared.debug("Capture completed: \(image.width)x\(image.height)")
         return image
     }
-    
-    private func getShareableContent() async throws -> SCShareableContent {
+
+    func invalidateCache() async {
+        availableContent = nil
+        contentLoadTask?.cancel()
+        contentLoadTask = nil
+        Logger.shared.debug("ScreenCaptureKit cache invalidated")
+    }
+
+private func getShareableContent() async throws -> SCShareableContent {
         if let cached = availableContent {
             return cached
         }
-        
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-        self.availableContent = content
-        return content
-    }
-    
-    func refreshAvailableContent() async {
+
+        // Coalesce concurrent requests
+        if let existingTask = contentLoadTask {
+            return try await existingTask.value
+        }
+
+        let task = Task { () -> SCShareableContent in
+            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            return content
+        }
+        contentLoadTask = task
+
         do {
-            availableContent = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+            let content = try await task.value
+            // Check if task was cancelled (e.g., due to cache invalidation) before caching
+            if !task.isCancelled {
+                availableContent = content
+            }
+            contentLoadTask = nil
+            return content
         } catch {
-            Logger.shared.error("Failed to refresh shareable content: \(error)")
+            // Only clear contentLoadTask if it's still our task
+            // Use pointer equality check via unsafeBitCast since Task is a struct
+            if unsafeBitCast(contentLoadTask, to: UInt.self) == unsafeBitCast(task, to: UInt.self) {
+                contentLoadTask = nil
+            }
+            throw error
         }
     }
 }

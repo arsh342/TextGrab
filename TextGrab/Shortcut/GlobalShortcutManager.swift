@@ -18,11 +18,11 @@ final class GlobalShortcutManager: ObservableObject, ShortcutService {
     @Published var isRegistered: Bool = false
     @Published var currentShortcut: String = "⌘⇧2"
     @Published var currentSavedShortcut: String = "⌘⌥2"
-    
+
     private var hotKeyRef: EventHotKeyRef?
     private var savedHotKeyRef: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?
-    
+
     private var shortcutKeyCode: UInt32 = 19 // '2' key
     private var shortcutModifiers: UInt32 = UInt32(cmdKey | shiftKey)
     private let defaults = UserDefaults.standard
@@ -30,7 +30,7 @@ final class GlobalShortcutManager: ObservableObject, ShortcutService {
     private let modifiersDefaultsKey = "shortcutModifiers"
     private let savedKeyCodeDefaultsKey = "savedShortcutKeyCode"
     private let savedModifiersDefaultsKey = "savedShortcutModifiers"
-    
+
     init() {
         if defaults.object(forKey: keyCodeDefaultsKey) != nil {
             shortcutKeyCode = UInt32(defaults.integer(forKey: keyCodeDefaultsKey))
@@ -47,16 +47,16 @@ final class GlobalShortcutManager: ObservableObject, ShortcutService {
         currentShortcut = defaults.string(forKey: "shortcut") ?? currentShortcut
         currentSavedShortcut = defaults.string(forKey: "savedShortcut") ?? currentSavedShortcut
     }
-    
+
     deinit {
         unregister()
     }
-    
+
     func register() throws {
         guard hotKeyRef == nil else { return }
-        
+
         var eventType = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
-        
+
         let status = InstallEventHandler(GetApplicationEventTarget(), { (nextHandler, theEvent, userData) -> OSStatus in
             guard let userData else {
                 return OSStatus(eventNotHandledErr)
@@ -82,12 +82,12 @@ final class GlobalShortcutManager: ObservableObject, ShortcutService {
             NotificationCenter.default.post(name: notification, object: nil)
             return noErr
         }, 1, &eventType, Unmanaged.passUnretained(self).toOpaque(), &eventHandler)
-        
+
         guard status == noErr else {
             Logger.shared.error("Failed to install event handler: \(status)")
             throw TextGrabError.shortcutRegistrationFailed("Failed to install event handler")
         }
-        
+
         let hotKeyID = EventHotKeyID(signature: OSType(fourCharCode("TGKB")), id: 1)
         let registerStatus = RegisterEventHotKey(
             shortcutKeyCode,
@@ -97,7 +97,7 @@ final class GlobalShortcutManager: ObservableObject, ShortcutService {
             0,
             &hotKeyRef
         )
-        
+
         guard registerStatus == noErr else {
             Logger.shared.error("Failed to register hotkey: \(registerStatus)")
             if let handler = eventHandler {
@@ -127,11 +127,11 @@ final class GlobalShortcutManager: ObservableObject, ShortcutService {
             unregister()
             throw TextGrabError.shortcutRegistrationFailed("Failed to register saved-area hotkey (code: \(savedRegisterStatus))")
         }
-        
+
         isRegistered = true
         Logger.shared.info("Global shortcut registered: \(currentShortcut)")
     }
-    
+
     func unregister() {
         if let hotKey = hotKeyRef {
             UnregisterEventHotKey(hotKey)
@@ -142,16 +142,16 @@ final class GlobalShortcutManager: ObservableObject, ShortcutService {
             UnregisterEventHotKey(hotKey)
             savedHotKeyRef = nil
         }
-        
+
         if let handler = eventHandler {
             RemoveEventHandler(handler)
             eventHandler = nil
         }
-        
+
         isRegistered = false
         Logger.shared.info("Global shortcut unregistered")
     }
-    
+
     func updateShortcut(keyCode: UInt32, modifiers: UInt32, displayString: String) throws {
         try updateShortcut(.selection, keyCode: keyCode, modifiers: modifiers, displayString: displayString)
     }

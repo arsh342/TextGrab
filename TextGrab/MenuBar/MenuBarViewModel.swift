@@ -127,7 +127,7 @@ final class DefaultMenuBarViewModel: MenuBarViewModel {
     func captureAction() {
         Task { @MainActor in
             do {
-                try await captureCoordinator.capture(region: nil, on: nil)
+                _ = try await captureCoordinator.capture(region: nil, on: nil)
             } catch {
                 appState.transition(to: .error(error as? TextGrabError ?? TextGrabError.captureFailed(error.localizedDescription)))
             }
@@ -137,7 +137,7 @@ final class DefaultMenuBarViewModel: MenuBarViewModel {
     func retryAction() {
         Task { @MainActor in
             do {
-                try await captureCoordinator.captureSavedRegion()
+                _ = try await captureCoordinator.captureSavedRegion()
             } catch {
                 appState.transition(to: .error(error as? TextGrabError ?? TextGrabError.captureFailed(error.localizedDescription)))
             }
@@ -149,7 +149,7 @@ final class DefaultMenuBarViewModel: MenuBarViewModel {
         transformingOperation = operation
         Task { @MainActor in
             do {
-                try await captureCoordinator.transformLast(operation)
+                _ = try await captureCoordinator.transformLast(operation)
             } catch {
                 appState.transition(to: .error(error as? TextGrabError ?? TextGrabError.aiFailed(error.localizedDescription)))
             }

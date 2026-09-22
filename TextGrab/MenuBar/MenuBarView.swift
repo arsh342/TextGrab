@@ -10,52 +10,147 @@ struct MenuBarView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            headerView
-
-            Divider()
-
+        ZStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    actionRow
-
-                    if viewModel.isProcessing {
-                        progressView
-                    }
-
-                    if let error = viewModel.lastError {
-                        errorView(error)
-                    }
-
-                    if let text = viewModel.lastCapture {
-                        lastCaptureView(text)
-                    }
-
-                    if viewModel.enableHistory && !viewModel.history.isEmpty {
-                        historyView
-                    }
-                }
-                .padding(14)
-                .animation(.snappy(duration: 0.18), value: viewModel.isProcessing)
-                .animation(.snappy(duration: 0.18), value: viewModel.history)
+                scrollContent
             }
 
-            Divider()
-            footerView
+            topBlurFade
+            bottomBlurFade
+
+            topBar
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+            bottomBar
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
         .frame(width: 380, height: 460)
         .background(WindowPositionAdjuster(offset: 40))
     }
 
-    private var headerView: some View {
-        HStack(spacing: 8) {
+    private var topBar: some View {
+        HStack {
             Text("TextGrab")
                 .font(.system(size: 13, weight: .bold))
             Spacer()
             extractionModeView
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
+        .frame(minHeight: 44)
+    }
+
+    private var bottomBar: some View {
+        HStack {
+            settingsButton
+            Spacer()
+            quitButton
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(minHeight: 44)
+    }
+
+    private var scrollContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            actionRow
+
+            if viewModel.isProcessing {
+                progressView
+            }
+
+            if let error = viewModel.lastError {
+                errorView(error)
+            }
+
+            if let text = viewModel.lastCapture {
+                lastCaptureView(text)
+            }
+
+            if viewModel.enableHistory && !viewModel.history.isEmpty {
+                historyView
+            }
+        }
+        .padding(14)
+        .padding(.top, 50)
+        .padding(.bottom, 50)
+        .animation(.snappy(duration: 0.18), value: viewModel.isProcessing)
+        .animation(.snappy(duration: 0.18), value: viewModel.history)
+    }
+
+    // Manual masked-material fade — static, always visible regardless of
+    // scroll state.
+    private var topBlurFade: some View {
+        Rectangle()
+            .fill(.regularMaterial)
+            .frame(height: 58)
+            .mask(
+                LinearGradient(
+                    colors: [.black, .black.opacity(0)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .allowsHitTesting(false)
+    }
+
+    private var bottomBlurFade: some View {
+        Rectangle()
+            .fill(.regularMaterial)
+            .frame(height: 58)
+            .mask(
+                LinearGradient(
+                    colors: [.black.opacity(0), .black],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            .allowsHitTesting(false)
+    }
+
+    private var settingsButton: some View {
+        Group {
+            if #available(macOS 26.0, *) {
+                Button("Settings") {
+                    openSettings()
+                    NotificationCenter.default.post(name: .settingsRequested, object: nil)
+                }
+                .buttonStyle(.glass)
+            } else {
+                Button("Settings") {
+                    openSettings()
+                    NotificationCenter.default.post(name: .settingsRequested, object: nil)
+                }
+                .buttonStyle(.plain)
+                .padding(8)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                .shadow(radius: 4)
+            }
+        }
+        .font(.caption)
+        .accessibilityIdentifier("settingsButton")
+    }
+
+    private var quitButton: some View {
+        Group {
+            if #available(macOS 26.0, *) {
+                Button("Quit") {
+                    NSApp.terminate(nil)
+                }
+                .buttonStyle(.glass)
+            } else {
+                Button("Quit") {
+                    NSApp.terminate(nil)
+                }
+                .buttonStyle(.plain)
+                .padding(8)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+                .shadow(radius: 4)
+            }
+        }
+        .font(.caption)
     }
 
     private var actionRow: some View {
@@ -110,60 +205,96 @@ struct MenuBarView: View {
 
     private func modeSegment(for mode: OCRMode) -> some View {
         let isSelected = mode == viewModel.extractionMode
-        return Button {
-            viewModel.extractionMode = mode
-        } label: {
-            Label(mode.displayName, systemImage: mode.systemImage)
-                .font(.caption.weight(isSelected ? .semibold : .regular))
-                .foregroundStyle(isSelected ? Color.primary : Color.secondary)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 4)
-                .background(
-                    isSelected ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.clear),
-                    in: RoundedRectangle(cornerRadius: 6)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .strokeBorder(
-                            isSelected ? Color.primary.opacity(0.12) : Color.clear,
-                            lineWidth: 1
+
+        return Group {
+            if #available(macOS 26.0, *) {
+                if isSelected {
+                    Button {
+                        viewModel.extractionMode = mode
+                    } label: {
+                        Label(mode.displayName, systemImage: mode.systemImage)
+                            .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.glassProminent)
+                } else {
+                    Button {
+                        viewModel.extractionMode = mode
+                    } label: {
+                        Label(mode.displayName, systemImage: mode.systemImage)
+                            .font(.caption)
+                            .foregroundStyle(Color.secondary)
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 4)
+                    }
+                    .buttonStyle(.plain)
+                }
+            } else {
+                Button {
+                    viewModel.extractionMode = mode
+                } label: {
+                    Label(mode.displayName, systemImage: mode.systemImage)
+                        .font(.caption.weight(isSelected ? .semibold : .regular))
+                        .foregroundStyle(isSelected ? Color.primary : Color.secondary)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 4)
+                        .background(
+                            isSelected ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.clear),
+                            in: RoundedRectangle(cornerRadius: 6)
                         )
-                )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(
+                                    isSelected ? Color.primary.opacity(0.12) : Color.clear,
+                                    lineWidth: 1
+                                )
+                        )
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .buttonStyle(.plain)
-        .help("\(mode.displayName) extraction")
+        .disabled(viewModel.isProcessing || viewModel.isTransforming)
     }
 
     private var progressView: some View {
-        HStack(spacing: 8) {
+        VStack(spacing: 6) {
             ProgressView()
+                .progressViewStyle(.linear)
                 .controlSize(.small)
+
             Text(viewModel.processingText)
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Spacer()
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(.regularMaterial, in: Capsule())
-        .transition(.opacity.combined(with: .move(edge: .top)))
-    }
-
-    private func errorView(_ error: TextGrabError) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
-            Text(error.errorDescription ?? "Unknown error")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Spacer()
-        }
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
         .overlay(
             RoundedRectangle(cornerRadius: 8)
                 .strokeBorder(Color.orange.opacity(0.25), lineWidth: 1)
+        )
+        .transition(.opacity)
+    }
+
+    private func errorView(_ error: TextGrabError) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+
+                Text(error.localizedDescription)
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color.red.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color.red.opacity(0.25), lineWidth: 1)
         )
         .transition(.opacity)
     }
@@ -283,81 +414,61 @@ struct MenuBarView: View {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private var footerView: some View {
-        HStack {
-            Button("Settings") {
-                openSettings()
-                NotificationCenter.default.post(name: .settingsRequested, object: nil)
-            }
-            .font(.caption)
-            .accessibilityIdentifier("settingsButton")
+    private struct HistoryRow: View {
+        let index: Int
+        let item: HistoryItem
+        let onCopy: () -> Void
+        let onDelete: () -> Void
+        @State private var isHovering = false
 
-            Spacer()
+        var body: some View {
+            HStack(spacing: 8) {
+                Text("\(index + 1)")
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16)
 
-            Button("Quit") {
-                NSApp.terminate(nil)
+                Text(item.text)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button(action: onCopy) {
+                    Image(systemName: "doc.on.doc")
+                        .font(.caption2)
+                        .foregroundStyle(isHovering ? Color.primary : Color.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Copy")
+
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .font(.caption2)
+                        .foregroundStyle(isHovering ? Color.red : Color.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Delete")
             }
-            .font(.caption)
+            .padding(.horizontal, 8)
+            .frame(minHeight: 30)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(
+                        isHovering
+                            ? Color.accentColor.opacity(0.15)
+                            : Color(nsColor: .textBackgroundColor).opacity(0.55)
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .strokeBorder(
+                        isHovering ? Color.accentColor.opacity(0.3) : Color.primary.opacity(0.08),
+                        lineWidth: 1
+                    )
+            )
+            .onHover { isHovering = $0 }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-    }
-}
-
-private struct HistoryRow: View {
-    let index: Int
-    let item: HistoryItem
-    let onCopy: () -> Void
-    let onDelete: () -> Void
-    @State private var isHovering = false
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text("\(index + 1)")
-                .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
-                .frame(width: 16)
-
-            Text(item.text)
-                .font(.system(size: 11))
-                .lineLimit(1)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button(action: onCopy) {
-                Image(systemName: "doc.on.doc")
-                    .font(.caption2)
-                    .foregroundStyle(isHovering ? Color.primary : Color.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Copy")
-
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .font(.caption2)
-                    .foregroundStyle(isHovering ? Color.red : Color.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Delete")
-        }
-        .padding(.horizontal, 8)
-        .frame(minHeight: 30)
-        .background(
-            RoundedRectangle(cornerRadius: 6)
-                .fill(
-                    isHovering
-                        ? Color.accentColor.opacity(0.15)
-                        : Color(nsColor: .textBackgroundColor).opacity(0.55)
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .strokeBorder(
-                    isHovering ? Color.accentColor.opacity(0.3) : Color.primary.opacity(0.08),
-                    lineWidth: 1
-                )
-        )
-        .onHover { isHovering = $0 }
     }
 }
 

@@ -305,7 +305,7 @@ final class CodeTextProcessor: TextProcessor {
         let attachBackwards: Set<Character> = [",", ";", ".", ":"]
         return text.components(separatedBy: .newlines).map { line -> String in
             var result = ""
-            var chars = Array(line)
+            let chars = Array(line)
             var i = 0
 
             // Track string literal state

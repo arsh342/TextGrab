@@ -22,9 +22,13 @@ actor ScreenCaptureManager: ScreenCaptureService {
     private var availableContent: SCShareableContent?
     private var contentLoadTask: Task<SCShareableContent, Error>?
     private var displayChangeObserver: NSObjectProtocol?
+    private var observerInstalled = false
 
-    init() {
-        // Observe screen parameter changes to invalidate cache
+    init() {}
+
+    private func installDisplayChangeObserverIfNeeded() {
+        guard !observerInstalled else { return }
+        observerInstalled = true
         displayChangeObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil,
@@ -41,6 +45,7 @@ actor ScreenCaptureManager: ScreenCaptureService {
     }
 
     func capture(display: DisplayInfo, region: CGRect) async throws -> CGImage {
+        installDisplayChangeObserverIfNeeded()
         Logger.shared.debug("Capturing screen region: \(region) on display: \(display.localizedName)")
 
         var content = try await getShareableContent()

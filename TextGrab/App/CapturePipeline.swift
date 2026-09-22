@@ -77,8 +77,6 @@ final class DefaultCapturePipeline: CapturePipeline {
     }
 
     func captureSavedRegion() async throws -> String {
-        let targetScreen: NSScreen
-
         // Check permissions
         if !permissionsManager.hasScreenRecordingPermission {
             let granted = await permissionsManager.requestScreenRecordingPermission()

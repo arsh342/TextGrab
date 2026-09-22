@@ -143,7 +143,7 @@ final class ClipboardManager: ClipboardService, ObservableObject {
         let enabled = historyEnabled
         let limit = maxHistorySize
         persistTask = Task.detached(priority: .utility) { [persistQueue] in
-            await persistQueue.async {
+            persistQueue.async {
                 Self.persistHistoryStatic(items, enabled: enabled, limit: limit)
             }
         }

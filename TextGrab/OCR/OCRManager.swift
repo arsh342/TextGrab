@@ -1,5 +1,5 @@
 import Foundation
-import Vision
+@preconcurrency import Vision
 import CoreGraphics
 import CoreImage
 
@@ -58,14 +58,20 @@ final class OCRManager: OCRService {
 
 private func performRecognition(from image: CGImage, configuration: OCRConfiguration) async throws -> OCRResult {
         // Create request locally to avoid race conditions across concurrent calls
-        let textRequest = VNRecognizeTextRequest()
-        configuration.apply(to: textRequest)
         let workingImage = Self.downsampleIfNeeded(image)
+
+        // Use a box to share the request between operation and onCancel closures
+        final class RequestBox {
+            let request = VNRecognizeTextRequest()
+        }
+        let requestBox = RequestBox()
+        let textRequest = requestBox.request
+        configuration.apply(to: textRequest)
 
         return try await withTaskCancellationHandler(
             operation: {
-                try await withCheckedThrowingContinuation { continuation in
-                    DispatchQueue.global(qos: .userInitiated).async { [textProcessor] in
+                return try await withCheckedThrowingContinuation { continuation in
+                    DispatchQueue.global(qos: .userInitiated).async { [textProcessor, configuration] in
                         do {
                             try VNImageRequestHandler(cgImage: workingImage, options: [:]).perform([textRequest])
                             let observations = (textRequest.results ?? []).compactMap {

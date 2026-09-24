@@ -91,8 +91,8 @@ mkdir -p "$DMG_STAGING"
 ditto "$APP_PATH" "$DMG_STAGING/TextGrab.app"
 ln -s /Applications "$DMG_STAGING/Applications"
 mkdir -p "$DMG_STAGING/.background"
-if [[ -f "$ROOT_DIR/resources/dmg-background.png" ]]; then
-  sips -z 440 720 "$ROOT_DIR/resources/dmg-background.png" \
+if [[ -f "$ROOT_DIR/resources/background.tiff" ]]; then
+  sips -z 400 660 "$ROOT_DIR/resources/background.tiff" \
     --out "$DMG_STAGING/.background/dmg-background.png" >/dev/null
 fi
 mkdir -p "$(dirname "$DMG_PATH")"
@@ -123,17 +123,14 @@ tell application "Finder"
     set current view of theWindow to icon view
     set toolbar visible of theWindow to false
     set statusbar visible of theWindow to false
-    set bounds of theWindow to {200, 160, 920, 600}
+    set bounds of theWindow to {200, 160, 860, 560}
     set viewOptions to icon view options of theWindow
     set icon size of viewOptions to 112
     set text size of viewOptions to 14
     set arrangement of viewOptions to not arranged
     set background picture of viewOptions to POSIX file "$DMG_MOUNT/.background/dmg-background.png"
-    set position of item "TextGrab.app" to {198, 260}
-    set position of item "Applications" to {522, 260}
-    close
-    open
-    update without registering applications
+    set position of item "TextGrab.app" to {150, 180}
+    set position of item "Applications" to {510, 180}
   end tell
 end tell
 APPLESCRIPT
